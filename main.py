@@ -9,16 +9,16 @@ firebaseConfig = {
 
   'apiKey':os.getenv('API_KEY'),
 
-  'authDomain':os.getenv('AUTHDOMAIN'),
+  'authDomain':os.getenv('AUTH_DOMAIN'),
 
-  'projectId': os.getenv('PROJECTID'),
+  'projectId': os.getenv('PROJECT_ID'),
 
-  'storageBucket':os.getenv('STORAGEBUCKET'),
+  'storageBucket':os.getenv('STORAGEB_UCKET'),
 
-  'messagingSenderId': os.getenv('MESSAGESENDERID'),
+  'messagingSenderId': os.getenv('MESSAGE_SENDER_ID'),
 
-  'appId': os.getenv('APPID'),
+  'appId': os.getenv('APP_ID'),
 
-  'measurementId': os.getenv('MEASUREMENTID') 
+  'measurementId': os.getenv('MEASUREMENT_ID') 
 
-};
+}
