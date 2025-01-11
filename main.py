@@ -5,7 +5,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-firebaseConfig = {
+Config = {
 
   'apiKey':os.getenv('API_KEY'),
 
@@ -13,7 +13,7 @@ firebaseConfig = {
 
   'projectId': os.getenv('PROJECT_ID'),
 
-  'storageBucket':os.getenv('STORAGEB_UCKET'),
+  'storageBucket':os.getenv('STORAGE_BUCKET'),
 
   'messagingSenderId': os.getenv('MESSAGE_SENDER_ID'),
 
