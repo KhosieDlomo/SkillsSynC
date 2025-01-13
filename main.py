@@ -30,6 +30,10 @@ def signin():
     password = pwinput.pwinput(prompt='Enter your Password: ', mask='#')
     try:
         user = auth.sign_in_with_email_and_password(email, password)
+        user_info = auth.get_account_info(user['idToken'])
+        if not user_info['users'][0]['emailVerified']:
+            click.echo('Error: Please verify your email first.')
+            return
         click.echo(f'successfully signed in {email}')
     except Exception as e:
         click.echo(f'Invalid credentials or the user {e} does not exist')
@@ -37,10 +41,16 @@ def signin():
 @cli.command()
 def signup():
     """Hello, Join us by signing up"""
+    name = input("Enter your Full Name: ")
     email = input("Enter your email: ")
     password = pwinput.pwinput(prompt='Enter your Password: ', mask='#')
+    confirm_password = pwinput.pwinput(prompt='Confirm Your password: ', mask='#')
+    if password != confirm_password:
+        click.echo('Error: Password do not match!')
+        return
     try:
         user = auth.create_user_with_email_and_password(email,password)
+        auth.send_email_verification(user['idToken'])
         click.echo(f'Account created successfully, {email}')
     except Exception as e:
         click.echo(f'Error: Email already been used {e}')
