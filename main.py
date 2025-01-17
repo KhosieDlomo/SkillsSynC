@@ -5,10 +5,17 @@ import pwinput
 import firebase_admin
 from firebase_admin import credentials
 from firebase_admin import firestore
+from google.oauth2.credentials import Credentials 
+from google_auth_oauthlib.flow import InstalledAppFlow 
+from googleapiclient.discovery import build  
 
 from dotenv import load_dotenv
 
 load_dotenv()
+
+SCOPES = ['https://www.googleapis.com/auth/calendar',
+          'https://www.googleapis.com/auth/calendar.events'
+         ]
 
 Config = {
           'apiKey':os.getenv('API_KEY'),
