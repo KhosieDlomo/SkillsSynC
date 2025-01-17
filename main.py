@@ -61,16 +61,17 @@ def signup():
             click.echo('Error: Password do not match!')
             continue
         validation = valid_input(password, email)
-        if validation[0] is not True:
-            click.echo(f'Error! Invalid Password {validation[1] or ""}')
-        else:
+        if not validation:
+            click.echo('Error! Invalid Password or Email')
+            continue
+        try:
+            user = auth.create_user_with_email_and_password(email,password)
+            auth.send_email_verification(user['idToken'])
+            click.echo(f'Account created successfully, {email}')
+            db.collection('users').add({'name':name, 'email': email})
             break
-    try:
-        user = auth.create_user_with_email_and_password(email,password)
-        auth.send_email_verification(user['idToken'])
-        click.echo(f'Account created successfully, {email}')
-    except Exception as e:
-        click.echo(f'Error: Email already been used {e}')
+        except Exception as e:
+            click.echo(f'Error: Email already been used {e}')
 
 @cli.command()
 def reset_password():
@@ -122,7 +123,7 @@ def valid_input(password, email):
     if '@gmail.com' not in email:
         return False
 
-    return True
+    return email, password
     
 cli.add_command(signin)
 cli.add_command(signup)
