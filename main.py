@@ -2,12 +2,15 @@ import pyrebase
 import click
 import os
 import pwinput
+import datetime
 import firebase_admin
 from firebase_admin import credentials
 from firebase_admin import firestore
 from google.oauth2.credentials import Credentials 
 from google_auth_oauthlib.flow import InstalledAppFlow 
 from googleapiclient.discovery import build  
+from google.auth.transport.requests import Request
+from googleapiclient.errors import HttpError
 
 from dotenv import load_dotenv
 
