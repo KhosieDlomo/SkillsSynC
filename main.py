@@ -3,6 +3,7 @@ import click
 import os
 import pwinput
 import datetime
+import os.path
 import firebase_admin
 from firebase_admin import credentials
 from firebase_admin import firestore
@@ -135,6 +136,24 @@ def valid_input(password, email):
 
     return email, password
     
+def bookings():
+    cred = None
+    if os.path.exists('token.json'):
+        cred = Credentials.from_authorized_user_file('token.json', SCOPES)
+    if not cred or not cred.valid:
+        if cred and cred.expired and cred.refresh_token:
+            cred.refresh(Request())
+        else:
+            flow = InstalledAppFlow.from_client_secrets_file('credentials.json',SCOPES)
+            cred = flow.run_local_server(port=0)
+        with open('token.json', 'w') as token:
+            token.write(cred.to_json())
+    try:
+        service = build('calendar', 'v3', credentials=cred)
+        now = datetime.datetime.now().isoformat() + 'Z'
+        event_result = service.events().list(calendarId='primary', timeMin=now, maxResults=10, singleEvents= True, orderBy='startTime')
+    except HttpError as error:
+        click.echo(f'An error occured: {error}')
 cli.add_command(signin)
 cli.add_command(signup)
 cli.add_command(reset_password)
