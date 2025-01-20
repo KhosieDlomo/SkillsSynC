@@ -139,17 +139,17 @@ def valid_input(password, email):
     return email, password
     
 def bookings():
-    cred = None
+    creds= None
     if os.path.exists('token.json'):
-        cred = Credentials.from_authorized_user_file('token.json', SCOPES)
-    if not cred or not cred.valid:
-        if cred and cred.expired and cred.refresh_token:
-            cred.refresh(Request())
+        creds = Credentials.from_authorized_user_file('token.json', SCOPES)
+    if not creds or not creds.valid:
+        if creds and creds.expired and creds.refresh_token:
+            creds.refresh(Request())
         else:
             flow = InstalledAppFlow.from_client_secrets_file('credentials.json', SCOPES)
-            cred = flow.run_local_server(port=0)
+            creds = flow.run_local_server(port=0)
         with open('token.json', 'w') as token:
-            token.write(cred.to_json())
+            token.write(creds.to_json())
     try:
         service = build('calendar', 'v3', credentials=cred)
         now = datetime.datetime.now().isoformat() + 'Z'
