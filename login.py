@@ -1,5 +1,4 @@
 import click
-import os
 import pwinput
 from firebase_auth import auth, db
 from validation import valid_input

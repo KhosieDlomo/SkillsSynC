@@ -1,5 +1,5 @@
-from datetime import datetime, timedelta
-import os.path
+import datetime
+import os
 from google.oauth2.credentials import Credentials 
 from google_auth_oauthlib.flow import InstalledAppFlow 
 from googleapiclient.discovery import build  
@@ -25,7 +25,8 @@ def bookings():
             token.write(cred.to_json())
     try:
         service = build('calendar', 'v3', credentials=cred)
-        
-            
+        now = datetime.datetime.now().isoformat() + 'Z'
+        event_result = service.events().list(calendarId='primary', timeMin=now, maxResults=10, singleEvents= True, orderBy='startTime').execute()
+        events = event_result.get('items', [])
     except HttpError as error:
         print(f'An error occured: {error}')
