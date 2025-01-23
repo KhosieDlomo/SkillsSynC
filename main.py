@@ -9,16 +9,14 @@ from firebase_admin import credentials
 from firebase_admin import firestore
 from google.oauth2.credentials import Credentials 
 from google_auth_oauthlib.flow import InstalledAppFlow 
-from googleapiclient.discovery import build  
+from googleapiclient.discovery import build , Resource
 from google.auth.transport.requests import Request
-from google.oauth2 import service_account
 from googleapiclient.errors import HttpError
 
 from dotenv import load_dotenv
 
 load_dotenv()
 
-SERVICE_ACCOUNT_FILE = 'path'
 SCOPES = ['https://www.googleapis.com/auth/calendar',
           'https://www.googleapis.com/auth/calendar.events'
          ]
@@ -139,28 +137,52 @@ def valid_input(password, email):
     return email, password
     
 def bookings():
-    creds= None
+    cred = None
     if os.path.exists('token.json'):
-        creds = Credentials.from_authorized_user_file('token.json', SCOPES)
-    if not creds or not creds.valid:
-        if creds and creds.expired and creds.refresh_token:
-            creds.refresh(Request())
+        cred = Credentials.from_authorized_user_file('token.json', SCOPES)
+
+    if not cred or not cred.valid:
+        if cred and cred.expired and cred.refresh_token:
+            cred.refresh(Request())
         else:
             flow = InstalledAppFlow.from_client_secrets_file('credentials.json', SCOPES)
-            creds = flow.run_local_server(port=0)
+            cred = flow.run_local_server(port=0)
         with open('token.json', 'w') as token:
-            token.write(creds.to_json())
+            token.write(cred.to_json())
     try:
-        service = build('calendar', 'v3', credentials=cred)
-        now = datetime.datetime.now().isoformat() + 'Z'
-        event_result = service.events().list(calendarId='primary', timeMin=now, maxResults=10, singleEvents= True, orderBy='startTime').execute()
-        events = event_result.get('items', [])
+        service: Resource = build('calendar', 'v3', credentials=cred)
+        subject = input('Event subject: ')
+        date = input('Event date(DD-MM-YYYY): ')
+        start_time = input('Event start time (HH-MM): ')
+        end_time = input('Event end time (HH-MM): ')
+        attendees = input('Emails of the participants: ').split(',')
+
+        start_hour = datetime.datetime.strptime(f'{date} {start_time}', "%d-%m-%Y %H:%M")
+        end_hour = datetime.datetime.strptime(f'{date} {end_time}', "%d-%m-%Y %H:%M")
+
+        if start_hour.weekday() >= 5 or start_hour.hour < 7 or end_hour.hour > 17:
+            click.echo("Error! Meetings are only allowed on weekdays between 07:00 to 17:00.")
+            return
+        event = {'summary': subject,
+                 'start':{'dateTime': start_hour.isoformat(), 'timeZone': 'UTC'},
+                 'end':{'dateTime': end_hour.isoformat(), 'timeZone': 'UTC'},
+                 'attendees': [{'email': email.strip() for email in attendees}],
+                 'reminders': {'useDefault': False,
+                               'overrides' : [{'method':'email', 'minutes': 24 * 60},
+                                                {'method': 'popup', 'minutes': 15},
+                                             ],
+                              },
+                }    
+        event_result = service.events().insert(calendarId='primary', body=event,sendUpdates='all').execute()
+        click.echo(f'Event created successfully: {event_result.get('htmlLink')}') 
+
     except HttpError as error:
-        click.echo(f'An error occured: {error}')
+        print(f'An error occured: {error}')
 cli.add_command(signin)
 cli.add_command(signup)
 cli.add_command(reset_password)
 cli.add_command(signout)
+cli.add_command(bookings)
 
 if __name__ =='__main__':
     cli()
