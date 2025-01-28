@@ -18,8 +18,9 @@ Config = {
           'measurementId': os.getenv('MEASUREMENT_ID'),
           'databaseURL':os.getenv('DATABASE_URL')
           }
-creds = {'db_firebase': os.getenv('DB_FIRESTORE')}
-cred = credentials.Certificate(creds)
+
+creds_path = os.getenv('DB_FIRESTORE')
+cred = credentials.Certificate(creds_path)
 firebase_admin.initialize_app(cred)
 
 db = firestore.client()

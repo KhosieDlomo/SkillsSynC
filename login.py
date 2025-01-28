@@ -3,11 +3,7 @@ import pwinput
 from firebase_auth import auth, db
 from validation import valid_input
 
-@click.group()
-def cli():
-    pass
-
-@cli.command()
+@click.command()
 def signin():
     """Welcome Back, Please Sign in"""
     email = input("Enter your email: ")
@@ -22,13 +18,14 @@ def signin():
     except Exception as e:
         click.echo(f'Invalid credentials or the user {e} does not exist')
 
-@cli.command()
+@click.command()
 def signup():
     """Hello, Join us by signing up"""
     name = input("Enter your Full Name: ")
     email = input("Enter your email: ")
     role = input('Enter your role (Mentor/Peer): ').lower()
 
+    
     while True:
         password = pwinput.pwinput(prompt='Enter your Password: ', mask='#')
         confirm_password = pwinput.pwinput(prompt='Confirm Your password: ', mask='#')
@@ -50,7 +47,7 @@ def signup():
         except Exception as e:
             click.echo(f'Error! An unexpected erro occured: {e}')
 
-@cli.command()
+@click.command()
 def reset_password():
     '''Please provide us with your email to reset the password.'''
     email = input('Enter your email: ')
@@ -60,7 +57,7 @@ def reset_password():
     except Exception as e:
         click.echo(f'Error: Invalid email provided {e}')
 
-@cli.command()
+@click.command()
 def signout():
     '''Hate to see you leave, Come back soon...'''
     try:
