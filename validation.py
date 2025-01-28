@@ -29,5 +29,5 @@ def valid_input(password, email):
     if '@gmail.com' not in email:
         return False
 
-    return email, password
+    return True
     

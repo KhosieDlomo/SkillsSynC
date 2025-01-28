@@ -55,10 +55,10 @@ def bookings():
         return
     
     event = {'summary': subject,
-             'locatio' : location,
+             'location' : location,
              'start':{'dateTime': start_hour.isoformat(), 'timeZone': 'UTC'},
              'end':{'dateTime': end_hour.isoformat(), 'timeZone': 'UTC'},
-             'attendees': [{'email': email.strip() for email in attendees}],
+             'attendees': [{'email': email.strip()} for email in attendees],
              'reminders': {'useDefault': False,
                             'overrides' : [{'method':'email', 'minutes': 24 * 60},
                                             {'method': 'popup', 'minutes': 15},
@@ -106,12 +106,22 @@ def cancel_booking():
         # Remove from Google Calendar
         cred = Credentials.from_authorized_user_file('token.json', SCOPES)
         service = build('calendar', 'v3', credentials=cred)
-        service.events().delete(calendarId='primary', eventId=event_id).execute()
-
+       
+        if service:
+            try:
+                service.events().delete(calendarId='primary', eventId=event_id).execute()
+            except HttpError as e:
+                click.echo(f'Error deleting from the Calendar: {e}')
+                return
         # Remove from Firestore
         meetings = db.collection('meetings').where('google_event_id', '==', event_id).stream()
+        deleted = False
         for meeting in meetings:
             db.collection('meetings').document(meeting.id).delete()
+            deleted = True
+        if not deleted:
+            click.echo(f"Booking with event id: '{event_id}' not found")
+            return
         
         click.echo("Booking successfully canceled.")
     except Exception as e:

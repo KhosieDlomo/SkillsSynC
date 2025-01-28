@@ -13,3 +13,6 @@ cli.add_command(signout)
 cli.add_command(bookings)
 cli.add_command(view_booking)
 cli.add_command(cancel_booking)
+
+if __name__ =='__main__':
+    cli()
