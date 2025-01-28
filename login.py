@@ -27,7 +27,7 @@ def signup():
     """Hello, Join us by signing up"""
     name = input("Enter your Full Name: ")
     email = input("Enter your email: ")
-    role = input('Enter your role (Mentor/Peer)').capitalize()
+    role = input('Enter your role (Mentor/Peer): ').lower()
 
     while True:
         password = pwinput.pwinput(prompt='Enter your Password: ', mask='#')
@@ -45,8 +45,10 @@ def signup():
             click.echo(f'Account created successfully, {email}')
             db.collection('users').add({'name':name, 'email': email, 'role': role})
             break
+        except auth.EmailAlreadyExistsError as e:
+            click.echo(f'Error: The email {email} already been used {e}')
         except Exception as e:
-            click.echo(f'Error: Email already been used {e}')
+            click.echo(f'Error! An unexpected erro occured: {e}')
 
 @cli.command()
 def reset_password():
