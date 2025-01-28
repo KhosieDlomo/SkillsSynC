@@ -113,6 +113,7 @@ def cancel_booking():
             except HttpError as e:
                 click.echo(f'Error deleting from the Calendar: {e}')
                 return
+            
         # Remove from Firestore
         meetings = db.collection('meetings').where('google_event_id', '==', event_id).stream()
         deleted = False
