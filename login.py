@@ -24,7 +24,10 @@ def signup():
     name = input("Enter your Full Name: ")
     email = input("Enter your email: ")
     role = input('Enter your role (Mentor/Peer): ').lower()
-
+    while role not in ['mentor', 'peer']:
+        click.echo('Invalid role. Please enter "Mentor" or "Peer".')
+        role = input('Enter your role (Mentor/Peer): ').lower()
+        
     while True:
         if role not in ['Mentor','Peer']:
             click.echo('Error! Please enter a valid role of either Mentor or Peer')
