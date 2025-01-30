@@ -19,8 +19,7 @@ Config = {
           'databaseURL':os.getenv('DATABASE_URL')
           }
 
-creds_path = os.getenv('DB_FIRESTORE')
-cred = credentials.Certificate(creds_path)
+cred = credentials.Certificate('skillssync-f88a7-firebase-adminsdk-u1lm7-2bf0d05d8f.json')
 firebase_admin.initialize_app(cred)
 
 db = firestore.client()

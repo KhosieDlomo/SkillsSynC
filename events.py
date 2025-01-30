@@ -4,10 +4,10 @@ import click
 from firebase_auth import db
 from google.oauth2.credentials import Credentials 
 from google_auth_oauthlib.flow import InstalledAppFlow 
-from googleapiclient.discovery import build  
+from googleapiclient.discovery import build , Resource
 from google.auth.transport.requests import Request
 from googleapiclient.errors import HttpError
-from googleapiclient.discovery import Resource
+from firebase_admin import firestore
 
 SCOPES = ['https://www.googleapis.com/auth/calendar',
           'https://www.googleapis.com/auth/calendar.events'
@@ -30,17 +30,18 @@ def get_calendar():
 
 @click.command()
 def bookings():
+    '''Book a meeting with your peers or mentors.'''
     service = get_calendar()
     
     subject = input('Event subject: ')
-    date = input('Event date(DD-MM-YYYY): ')
-    start_time = input('Event start time (HH-MM): ')
-    end_time = input('Event end time (HH-MM): ')
+    date = input('Event date(DD/MM/YYYY): ')
+    start_time = input('Event start time (HH:MM): ')
+    end_time = input('Event end time (HH:MM): ')
     attendees = input('Emails of the participants: ').split(',')
     location = input('Event Location (e.g: "Online" or a physical address): ')
 
-    start_hour = datetime.datetime.strptime(f'{date} {start_time}', "%d-%m-%Y %H:%M")
-    end_hour = datetime.datetime.strptime(f'{date} {end_time}', "%d-%m-%Y %H:%M")
+    start_hour = datetime.datetime.strptime(f'{date} {start_time}', "%d/%m/%Y %H:%M")
+    end_hour = datetime.datetime.strptime(f'{date} {end_time}', "%d/%m/%Y %H:%M")
 
     if start_hour.weekday() >= 5 or start_hour.hour < 7 or end_hour.hour > 17:
         click.echo("Error! Meetings are only allowed on weekdays between 07:00 to 17:00.")
@@ -106,24 +107,21 @@ def cancel_booking():
         # Remove from Google Calendar
         cred = Credentials.from_authorized_user_file('token.json', SCOPES)
         service = build('calendar', 'v3', credentials=cred)
+        service.events().delete(calendarId='primary', eventId=event_id).execute()
        
-        if service:
-            try:
-                service.events().delete(calendarId='primary', eventId=event_id).execute()
-            except HttpError as e:
-                click.echo(f'Error deleting from the Calendar: {e}')
-                return
+        # if service:
+        #     try:
+        #         service.events().delete(calendarId='primary', eventId=event_id).execute()
+        #     except HttpError as e:
+        #         click.echo(f'Error deleting from the Calendar: {e}')
+        #         return
             
         # Remove from Firestore
         meetings = db.collection('meetings').where('google_event_id', '==', event_id).stream()
-        deleted = False
+        
         for meeting in meetings:
             db.collection('meetings').document(meeting.id).delete()
-            deleted = True
-        if not deleted:
-            click.echo(f"Booking with event id: '{event_id}' not found")
-            return
-        
+                  
         click.echo("Booking successfully canceled.")
     except Exception as e:
         click.echo(f"Error canceling booking: {e}")
