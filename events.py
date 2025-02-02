@@ -1,7 +1,7 @@
 import datetime
 import os
 import click
-from firebase_auth import db
+from firebase_auth import db, auth
 from google.oauth2.credentials import Credentials 
 from google_auth_oauthlib.flow import InstalledAppFlow 
 from googleapiclient.discovery import build , Resource
@@ -31,6 +31,11 @@ def get_calendar():
 @click.command()
 def bookings():
     '''Book a meeting with your peers or mentors.'''
+
+    if not auth.current_user:
+        click.echo("Please sign up or sign in to use this feature")
+        return
+        
     service = get_calendar()
     
     subject = input('Event subject: ')
@@ -87,6 +92,11 @@ def bookings():
 @click.command()
 def view_booking():
     """View all your confirmed bookings."""
+
+    if not auth.current_user:
+        click.echo("Please sign up or sign in to use this feature")
+        return
+    
     email = input("Enter your email to fetch bookings: ")
 
     try:
@@ -94,13 +104,18 @@ def view_booking():
         click.echo(f'Bookings for {email}:')
         for booking in bookings:
             data = booking.to_dict()
-            click.echo(f"Subject: {data['subject']}, Date: {data['date']}, Time: {data['start_time']} - {data['end_time']}")
+            click.echo(f"Subject: {data['subject']}, Date: {data['date']}, Time: {data['start_time']} - {data['end_time']}, Event ID: {data['google_event_id']}")
     except Exception as e:
         click.echo(f"Error fetching bookings: {e}")
 
 @click.command
 def cancel_booking():
     """Cancel an existing booking."""
+
+    if not auth.current_user:
+        click.echo("Please sign up or sign in to use this feature")
+        return
+    
     event_id = input("Enter the event ID to cancel: ")
     
     try:
@@ -109,14 +124,6 @@ def cancel_booking():
         service = build('calendar', 'v3', credentials=cred)
         service.events().delete(calendarId='primary', eventId=event_id).execute()
        
-        # if service:
-        #     try:
-        #         service.events().delete(calendarId='primary', eventId=event_id).execute()
-        #     except HttpError as e:
-        #         click.echo(f'Error deleting from the Calendar: {e}')
-        #         return
-            
-        # Remove from Firestore
         meetings = db.collection('meetings').where('google_event_id', '==', event_id).stream()
         
         for meeting in meetings:
@@ -125,3 +132,19 @@ def cancel_booking():
         click.echo("Booking successfully canceled.")
     except Exception as e:
         click.echo(f"Error canceling booking: {e}")
+
+#workshops
+@click.command
+def view_workshorp():
+    """View all upcoming workshops and Available mentors and peers"""
+    if not auth.current_user:
+        click.echo('Please sign up or sign in to use this feature')
+        return
+    try:
+        workshops = db.collection('workshorp').where('date', '>=', datetime.datetime.now().isoformat()).stream()
+        click.echo('Upcoming workshorps')
+        for workshop in workshops:
+            data = workshop.to_dict()
+            click.echo(f'Title: {data['Title']}, Date: {data['Date']}, Time: {data['start_time']} - {data['end_time']}, Mentors: {', '.join(data.get('mentors', []))}, Peers: {', '.join(data.get('peers',[]))}')
+    except Exception as e:
+        click.echo(f'Error while fetching upcoming workshops: {e}')
