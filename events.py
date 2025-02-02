@@ -1,13 +1,13 @@
 import datetime
 import os
+from login import signin, signup
 import click
 from firebase_auth import db, auth
 from google.oauth2.credentials import Credentials 
 from google_auth_oauthlib.flow import InstalledAppFlow 
-from googleapiclient.discovery import build , Resource
+from googleapiclient.discovery import build
 from google.auth.transport.requests import Request
 from googleapiclient.errors import HttpError
-from firebase_admin import firestore
 
 SCOPES = ['https://www.googleapis.com/auth/calendar',
           'https://www.googleapis.com/auth/calendar.events'
