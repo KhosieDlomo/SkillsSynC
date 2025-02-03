@@ -15,6 +15,7 @@ def signin():
             click.echo('Error: Please verify your email first.')
             return
         click.echo(f'successfully signed in {email}')
+        auth.current_user = user
     except Exception as e:
         click.echo(f'Invalid credentials or the user {e} does not exist')
 
@@ -48,7 +49,7 @@ def signup():
             user = auth.create_user_with_email_and_password(email,password)
             auth.send_email_verification(user['idToken'])
             click.echo(f'Account created successfully, {email}')
-            db.collection('users').add({'name':name, 'email': email, 'role': role})
+            db.collection('users').document(user['localId']).set({'name':name, 'email': email, 'role': role, 'expertise' : ''})
             break
         except Exception as e:
             if email:
