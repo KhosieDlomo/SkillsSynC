@@ -2,7 +2,7 @@ import datetime
 import os
 from login import signin, signup
 import click
-from firebase_auth import db, auth
+from firebase_auth import db, auth, require_auth
 from google.oauth2.credentials import Credentials 
 from google_auth_oauthlib.flow import InstalledAppFlow 
 from googleapiclient.discovery import build
@@ -17,22 +17,28 @@ def get_calendar():
     cred = None
     if os.path.exists('token.json'):
         cred = Credentials.from_authorized_user_file('token.json', SCOPES)
-
+    
     if not cred or not cred.valid:
-        if cred and cred.expired and cred.refresh_token:
-            cred.refresh(Request())
-        else:
-            flow = InstalledAppFlow.from_client_secrets_file('credentials.json', SCOPES)
-            cred = flow.run_local_server(port=0)
-        with open('token.json', 'w') as token:
-            token.write(cred.to_json())
+        try:
+            if cred and cred.expired and cred.refresh_token:
+                cred.refresh(Request())
+            else:
+                flow = InstalledAppFlow.from_client_secrets_file('credentials.json', SCOPES)
+                cred = flow.run_local_server(port=0)
+            with open('token.json', 'w') as token:
+                token.write(cred.to_json())
+
+        except Exception as e:
+            click.echo(f'Authentication Error: {e}')
+            return None
+        
     return build('calendar', 'v3', credentials=cred)    
 
 @click.command()
 def bookings():
     '''Book a meeting with your peers or mentors.'''
 
-    if not auth.current_user:
+    if not require_auth():
         click.echo("Please sign up or sign in to use this feature")
         return
         
@@ -93,7 +99,7 @@ def bookings():
 def view_booking():
     """View all your confirmed bookings."""
 
-    if not auth.current_user:
+    if not require_auth():
         click.echo("Please sign up or sign in to use this feature")
         return
     
@@ -108,11 +114,11 @@ def view_booking():
     except Exception as e:
         click.echo(f"Error fetching bookings: {e}")
 
-@click.command
+@click.command()
 def cancel_booking():
     """Cancel an existing booking."""
 
-    if not auth.current_user:
+    if not require_auth():
         click.echo("Please sign up or sign in to use this feature")
         return
     
@@ -137,22 +143,25 @@ def cancel_booking():
 @click.command
 def view_workshorp():
     """View all upcoming workshops and Available mentors and peers"""
-    if not auth.current_user:
+    if not require_auth():
         click.echo('Please sign up or sign in to use this feature')
         return
+    
     try:
-        workshops = db.collection('workshorp').where('date', '>=', datetime.datetime.now().isoformat()).stream()
-        click.echo('Upcoming workshorps')
+        workshops = db.collection('workshops').where('date', '>=', datetime.datetime.now().isoformat()).stream()
+        click.echo('Upcoming workshops')
+
         for workshop in workshops:
             data = workshop.to_dict()
             click.echo(f'Title: {data['Title']}, Date: {data['Date']}, Time: {data['start_time']} - {data['end_time']}, Mentors: {', '.join(data.get('mentors', []))}, Peers: {', '.join(data.get('peers',[]))}')
+    
     except Exception as e:
         click.echo(f'Error while fetching upcoming workshops: {e}')
 
 @click.command
 def create_workshop():
     '''Mentors creating workshops and make it compulsory for peers. Only Mentors should access this feature'''
-    if not auth.current_user:
+    if not require_auth():
         click.echo('Please sign up or sign in to use this feature')
         return
     
@@ -171,8 +180,8 @@ def create_workshop():
     location = input('Workshop location: ')
 
     try:
-        start_hour = datetime.datetime.strftime(f'{date} {start_time}', '%d/%m/%Y %H:%M')
-        end_hour = datetime.datetime.strftime(f'{date} {end_time}', '%d/%m/%Y %H:%M')
+        start_hour = datetime.datetime.strptime(f'{date} {start_time}', '%d/%m/%Y %H:%M')
+        end_hour = datetime.datetime.strptime(f'{date} {end_time}', '%d/%m/%Y %H:%M')
     except ValueError:
         click.echo('Invalid date or time format, please use DD/MM/YYYY HH:MM')
         return

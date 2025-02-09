@@ -4,6 +4,7 @@ import firebase_admin
 from firebase_admin import credentials
 from firebase_admin import firestore
 from dotenv import load_dotenv
+import click
 
 load_dotenv()
 
@@ -26,3 +27,10 @@ db = firestore.client()
 
 firebase=pyrebase.initialize_app(Config)
 auth=firebase.auth()
+
+def require_auth():
+    '''function to check and make sure that user loged in before using features.'''
+    if not auth.current_user:
+        click.echo('Please sign up or sign in to use this feature.')
+        return False
+    return True
