@@ -28,12 +28,18 @@ def signup():
     while role not in ['mentor', 'peer']:
         click.echo('Invalid role. Please enter "Mentor" or "Peer".')
         role = input('Enter your role (Mentor/Peer): ').lower()
-        
-    while True:
-        if role not in ['Mentor','Peer']:
-            click.echo('Error! Please enter a valid role of either Mentor or Peer')
-            continue
-        break
+    
+    if role == 'mentor':
+        expertise = input('Enter your expertise, e.g ("Frontend Developer", "Backend Developer", "Fullstack Developer"): ').title()
+        languages = input('Enter your expertise languages, separated by commas (e.g., Python, React, Java, etc): ').capitalize()
+       
+    elif role == 'peer':
+        expertise = input('Enter your area of interest or expertise (e.g., Frontend Developer, Backend Developer, or Fullstack Developer): ').title()
+        languages = input('Enter your area of interest or expertise language, seperated by commas (e.g., Python, Java, Nextjs, etc): ').capitalize()
+    
+    expertise_languages = []
+    for lang in languages.split(','):
+        expertise_languages.append(lang.strip())
 
     while True:
         password = pwinput.pwinput(prompt='Enter your Password: ', mask='#')
@@ -49,11 +55,11 @@ def signup():
             user = auth.create_user_with_email_and_password(email,password)
             auth.send_email_verification(user['idToken'])
             click.echo(f'Account created successfully, {email}')
-            db.collection('users').document(user['localId']).set({'name':name, 'email': email, 'role': role, 'expertise' : ''})
+            db.collection('users').document(user['localId']).set({'name': name, 'email': email, 'role': role, 'expertise' : expertise, 'languages': expertise_languages})
             break
         except Exception as e:
             if email:
-                click.echo(f'Error: The email {email} already been used {e}')
+                click.echo(f'Error: The email {email}has already been used: {e}')
             else:
                 click.echo(f'Error! An unexpected erro occured: {e}')
 
