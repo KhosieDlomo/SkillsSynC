@@ -10,7 +10,7 @@ def available_mentors(expertise = None, available =True):
     if expertise:
         mentors = mentors.where('expertise', '==', expertise)
     if available:
-        mentors = mentors.where('availabilty', '==', True)
+        mentors = mentors.where('availability', '==', available)
     
     mentor_lst = []
     click.echo('Available Mentors...')
@@ -30,14 +30,14 @@ def available_peers(expertise=None, available=True):
     if expertise:
         peers = peers.where('expertise', '==', expertise)
     if available:
-        peers = peers.where('availabilty', '==', True)
+        peers = peers.where('availability', '==', available)
 
     peers_lst = []
     click.echo('Available Peers...')
     
     for peer in peers:
         peer_info = peer.to_dict()
-        peers_lst.append({"id": peer.id, 'name': peer_info['name'],'email': peer_info['Email'], 'expertise': peer_info.get('expertise', 'unknown')})
+        peers_lst.append({"id": peer.id, 'name': peer_info['name'],'email': peer_info['email'], 'expertise': peer_info.get('expertise', 'unknown')})
         click.echo(f' - Name: {peer_info['name']}, Email: {peer_info['email']}, Expertise: {peer_info.get('expertise', 'unknown')}')
     if not peers_lst:
         click.echo('No peers available at the moment.')
@@ -49,4 +49,4 @@ def feedback(user_id, mentor_id, rates, comment):
     feedback_val = db.collection('feedback').document()
     feedback_info = {'user_id': user_id, 'mentor_id': mentor_id, 'rating': rates, 'comment': comment, 'timestamp': datetime.utcnow()}
     feedback_val.set(feedback_info)
-    print('Feedback sumbitted successfully!')
+    click.echo('Feedback sumbitted successfully!')

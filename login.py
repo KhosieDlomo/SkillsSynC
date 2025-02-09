@@ -6,7 +6,7 @@ from validation import valid_input
 @click.command()
 def signin():
     """Welcome Back, Please Sign in"""
-    email = input("Enter your email: ")
+    email = click.prompt("Enter your email: ")
     password = pwinput.pwinput(prompt='Enter your Password: ', mask='#')
     try:
         user = auth.sign_in_with_email_and_password(email, password)
@@ -23,20 +23,20 @@ def signin():
 @click.command()
 def signup():
     """Hello, Join us by signing up"""
-    name = input("Enter your Full Name: ")
-    email = input("Enter your email: ")
-    role = input('Enter your role (Mentor/Peer): ').lower()
+    name = click.prompt("Enter your Full Name: ")
+    email = click.prompt("Enter your email: ")
+    role = click.prompt('Enter your role (Mentor/Peer): ').lower()
     while role not in ['mentor', 'peer']:
         click.echo('Invalid role. Please enter "Mentor" or "Peer".')
-        role = input('Enter your role (Mentor/Peer): ').lower()
+        role = click.prompt('Enter your role (Mentor/Peer): ').lower()
     
     if role == 'mentor':
-        expertise = input('Enter your expertise, e.g ("Frontend Developer", "Backend Developer", "Fullstack Developer"): ').title()
-        languages = input('Enter your expertise languages, separated by commas (e.g., Python, React, Java, etc): ').capitalize()
+        expertise = click.prompt('Enter your expertise, e.g ("Frontend Developer", "Backend Developer", "Fullstack Developer"): ').title()
+        languages = click.prompt('Enter your expertise languages, separated by commas (e.g., Python, React, Java, etc): ').capitalize()
        
     elif role == 'peer':
-        expertise = input('Enter your area of interest or expertise (e.g., Frontend Developer, Backend Developer, or Fullstack Developer): ').title()
-        languages = input('Enter your area of interest or expertise language, seperated by commas (e.g., Python, Java, Nextjs, etc): ').capitalize()
+        expertise = click.prompt('Enter your area of interest or expertise (e.g., Frontend Developer, Backend Developer, or Fullstack Developer): ').title()
+        languages = click.prompt('Enter your area of interest or expertise language, seperated by commas (e.g., Python, Java, Nextjs, etc): ').capitalize()
     
     expertise_languages = []
     for lang in languages.split(','):
@@ -71,7 +71,7 @@ def signup():
 @click.command()
 def reset_password():
     '''Please provide us with your email to reset the password.'''
-    email = input('Enter your email: ')
+    email = click.prompt('Enter your email: ')
     try:
         auth.send_password_reset_email(email)
         click.echo(f'Password reset email sent to {email} inbox')

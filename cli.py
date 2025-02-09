@@ -1,5 +1,6 @@
 import click
 from login import signin, signup, signout, reset_password
+from workshops import view_workshop, create_workshop
 from events import *
 
 @click.group()
@@ -13,7 +14,7 @@ cli.add_command(signout)
 cli.add_command(bookings)
 cli.add_command(view_booking)
 cli.add_command(cancel_booking)
-cli.add_command(view_workshorp)
+cli.add_command(view_workshop)
 cli.add_command(create_workshop)
 
 if __name__ =='__main__':
