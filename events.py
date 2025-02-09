@@ -141,7 +141,7 @@ def cancel_booking():
 
 #workshops
 @click.command
-def view_workshorp():
+def view_workshop():
     """View all upcoming workshops and Available mentors and peers"""
     if not require_auth():
         click.echo('Please sign up or sign in to use this feature')
@@ -233,7 +233,7 @@ def create_workshop():
             'peers': peers_email,
             'google_event_id': event_result.get('id')
         }
-        db.collection('workshorp').add(workshop_data)
+        db.collection('workshops').add(workshop_data)
         click.echo('Workshop created and all peers added successfully.')
     except HttpError as error:
         print(f"An error occured while creating event: {error}")
@@ -241,5 +241,5 @@ def create_workshop():
         click.echo(f'Failed to create workshop: {e}')
 
 if __name__ == '__main__':
-    cli = click.CommandCollection(sources=[bookings, view_booking, cancel_booking, view_workshorp, create_workshop, signup, signin])
+    cli = click.CommandCollection(sources=[bookings, view_booking, cancel_booking, view_workshop, create_workshop, signup, signin])
     cli()
