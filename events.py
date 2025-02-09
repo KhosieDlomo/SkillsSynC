@@ -54,7 +54,10 @@ def bookings():
             start_time = click.prompt('Event start time (HH:MM): ')
             end_time = click.prompt('Event end time (HH:MM): ')
             location = click.prompt('Event Location (e.g: "Online" or a physical address): ')
-
+            
+            online_link = None
+            if location == 'online'.lower():
+                online_link = click.prompt("Enter the online meeting link: ")
             try:
                 start_hour = datetime.datetime.strptime(f"{date} {start_time}", "%d/%m/%Y %H:%M")
                 end_hour = datetime.datetime.strptime(f"{date} {end_time}", "%d/%m/%Y %H:M")
@@ -85,6 +88,8 @@ def bookings():
                                                 {'method':'popup', 'minutes': 15}],
                                   },
                     }
+            if online_link:
+                event['description'] = f"{event.get('descriptio', '')}\nJoin online: {online_link}"
             try:
                 event_result = service.events().insert(calendarId='primary', body=event,sendUpdates='all').execute()
                 db.collection('meetings').add({'subject': subject,
@@ -94,6 +99,7 @@ def bookings():
                                                'location': location,
                                                'status':'confirmed',
                                                'google_event_id': event_result.get('id'),
+                                               'online_link': online_link
                                                })
                 click.echo(f"Event created successfully: {event_result.get('htmlLink')}")
             except HttpError as error:
@@ -154,6 +160,10 @@ def bookings():
     end_time = click.prompt('Event end time (HH:MM): ')
     location = click.prompt('Event Location (e.g: "Online" or a physical address): ')
     attendees = [chosen_person['email']]
+
+    online_link = None
+    if location == 'online'.lower():
+        online_link = click.prompt("Enter the online meeting link: ")
     
     try:
         start_hour = datetime.datetime.strptime(f'{date} {start_time}', "%d/%m/%Y %H:%M")
@@ -190,7 +200,9 @@ def bookings():
                                             {'method': 'popup', 'minutes': 15},
                                             ],
                             },
-            }    
+            }  
+    if online_link:
+            event['description'] = f"{event.get('description', '')}\nJoin online: {online_link}"  
     try:
         event_result = service.events().insert(calendarId='primary', body=event,sendUpdates='all').execute()
         db.collection('meetings').add({
@@ -202,6 +214,7 @@ def bookings():
             'location': location,  
             'status': 'confirmed',
             'google_event_id': event_result.get('id'), 
+            'online_link': online_link
         })
         click.echo(f'Event created successfully: {event_result.get('htmlLink')}') 
 

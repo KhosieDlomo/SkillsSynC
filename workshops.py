@@ -47,6 +47,10 @@ def create_workshop():
     end_time = click.prompt('Workshop end_time (HH:MM): ')
     location = click.prompt('Workshop location: ')
 
+    online_link = None
+    if location == 'online'.lower():
+        online_link = click.prompt("Enter the online meeting link,")
+
     try:
         start_hour = datetime.datetime.strptime(f'{date} {start_time}', '%d/%m/%Y %H:%M')
         end_hour = datetime.datetime.strptime(f'{date} {end_time}', '%d/%m/%Y %H:%M')
@@ -90,6 +94,8 @@ def create_workshop():
                                      ]   
                           },
             }
+    if online_link:
+            event['description'] = f"{event.get('description', '')}\nJoin online: {online_link}"
     try:
         event_result = service.events().insert(calendarId='primary', body=event,sendUpdates='all').execute()
 
@@ -101,7 +107,8 @@ def create_workshop():
             'location': location,
             'mentors': [auth.current_user.email],
             'peers': peers_email,
-            'google_event_id': event_result.get('id')
+            'google_event_id': event_result.get('id'),
+            'online_link': online_link
         }
         db.collection('workshops').add(workshop_data)
         click.echo('Workshop created and all peers added successfully.')
