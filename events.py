@@ -194,7 +194,7 @@ def bookings():
              'location' : location,
              'start':{'dateTime': start_hour.isoformat(), 'timeZone': 'UTC'},
              'end':{'dateTime': end_hour.isoformat(), 'timeZone': 'UTC'},
-             'attendees': [{'email': auth.current['email']}, {'email': chosen_person['email'].strip()} for email in attendees],
+             'attendees': [({'email': auth.current['email']}, {'email': chosen_person['email'].strip()}) for email in attendees],
              'reminders': {'useDefault': False,
                             'overrides' : [{'method':'email', 'minutes': 24 * 60},
                                             {'method': 'popup', 'minutes': 15},
@@ -214,7 +214,7 @@ def bookings():
             'location': location,  
             'status': 'confirmed',
             'google_event_id': event_result.get('id'), 
-            'online_link': online_link
+            'online_link':online_link
         })
         click.echo(f'Event created successfully: {event_result.get('htmlLink')}') 
 
