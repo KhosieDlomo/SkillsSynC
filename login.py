@@ -14,10 +14,11 @@ def signin():
         if not user_info['users'][0]['emailVerified']:
             click.echo('Error: Please verify your email first.')
             return
-        click.echo(f'successfully signed in {email}')
+        click.echo(f'Successfully signed in {email}')
         auth.current_user = user
     except Exception as e:
-        click.echo(f'Invalid credentials or the user {e} does not exist')
+        click.echo(f'Invalid credentials or the user does not exist : {e}')
+        return
 
 @click.command()
 def signup():
@@ -39,17 +40,21 @@ def signup():
     
     expertise_languages = []
     for lang in languages.split(','):
-        expertise_languages.append(lang.strip())
+        if languages:
+            expertise_languages.append(lang.strip())
+        else:
+            expertise_languages
+
 
     while True:
         password = pwinput.pwinput(prompt='Enter your Password: ', mask='#')
         confirm_password = pwinput.pwinput(prompt='Confirm Your password: ', mask='#')
         if password != confirm_password:
-            click.echo('Error: Password do not match!')
+            click.echo('Error: Passwords do not match!')
             continue
         validation = valid_input(password, email)
         if not validation:
-            click.echo('Error! Invalid Password or Email')
+            click.echo('Error! Invalid Password or Email.')
             continue
         try:
             user = auth.create_user_with_email_and_password(email,password)
@@ -71,13 +76,13 @@ def reset_password():
         auth.send_password_reset_email(email)
         click.echo(f'Password reset email sent to {email} inbox')
     except Exception as e:
-        click.echo(f'Error: Invalid email provided {e}')
+        click.echo(f'Error: Invalid email provided, Could not send reset email: {e}')
 
 @click.command()
 def signout():
     '''Hate to see you leave, Come back soon...'''
     try:
         auth.current_user = None
-        click.echo('Thank you for visiting. Bye')
+        click.echo('Signed out Successfully. Thank you for visiting. Goodbye')
     except Exception as e:
         click.echo(f'Run into an issue while signing out: {e}')

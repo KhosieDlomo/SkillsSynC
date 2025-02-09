@@ -26,32 +26,7 @@ def get_calendar():
             cred = flow.run_local_server(port=0)
         with open('token.json', 'w') as token:
             token.write(cred.to_json())
-    return build('calendar', 'v3', credentials=cred)
-
-def valid_time(str_time):
-    '''Function to validate time.'''
-    try:
-        val_time = datetime.datetime.strptime(str_time, '%H:%M')
-        if val_time.hour < 7 or val_time.hour >= 17:
-            click.echo("Meeting can only be scheduled between 07:00 and 17:00.")
-            return False
-        return True
-    except ValueError:
-        click.echo('Invalid time format. Please use HH:MM (e.g. 11:25).')
-        return False
-    
-def valid_date(str_date):
-    '''Function to validate date.'''
-    try:
-        val_date = datetime.datetime.strptime(str_date, '%d/%m/%Y')
-        week_days = val_date.weekday()
-        if week_days > 5:
-            click.echo('Meeting can only be scheduled on weekdays from Monday to Friday.')
-            return False
-        return True
-    except ValueError:
-        click.echo('Invalid date format. Please use DD/MM/YYYY (e.g. 20/08/2025).')
-        return False     
+    return build('calendar', 'v3', credentials=cred)    
 
 @click.command()
 def bookings():
