@@ -1,6 +1,7 @@
-from firebase_auth import auth, db
+from firebase_auth import db
 import click
 from datetime import datetime
+
 
 def listing_available_mentors():
     """Functions to display available mentors"""
@@ -28,3 +29,5 @@ def available_peers():
         peer_info = peer.to_dict()
         click.echo(f' - Name: {peer_info['name']}, Email: {peer_info['email']}, ID: {peer.id}')
         peers_lst.append({"id": peer.id, 'name': peer_info['name'],'email': peer_info['Email']})
+        return peers_lst
+    

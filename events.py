@@ -28,6 +28,31 @@ def get_calendar():
             token.write(cred.to_json())
     return build('calendar', 'v3', credentials=cred)
 
+def valid_time(str_time):
+    '''Function to validate time.'''
+    try:
+        val_time = datetime.datetime.strptime(str_time, '%H:%M')
+        if val_time.hour < 7 or val_time.hour >= 17:
+            click.echo("Meeting can only be scheduled between 07:00 and 17:00.")
+            return False
+        return True
+    except ValueError:
+        click.echo('Invalid time format. Please use HH:MM (e.g. 11:25).')
+        return False
+    
+def valid_date(str_date):
+    '''Function to validate date.'''
+    try:
+        val_date = datetime.datetime.strptime(str_date, '%d/%m/%Y')
+        week_days = val_date.weekday()
+        if week_days > 5:
+            click.echo('Meeting can only be scheduled on weekdays from Monday to Friday.')
+            return False
+        return True
+    except ValueError:
+        click.echo('Invalid date format. Please use DD/MM/YYYY (e.g. 20/08/2025).')
+        return False     
+
 @click.command()
 def bookings():
     '''Book a meeting with your peers or mentors.'''
