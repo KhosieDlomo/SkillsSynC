@@ -67,6 +67,7 @@ def create_workshop():
     try:
         event_result = service.events().list( calendarId='primary', timeMin=time_min, timeMax=time_max, singleEvents=True).execute()
         events = event_result.get('items', [])
+        
         if events:
             click.echo("Schedule for another meeting at this time. select different time.")
             return
@@ -94,6 +95,7 @@ def create_workshop():
                                      ]   
                           },
             }
+    
     if online_link:
             event['description'] = f"{event.get('description', '')}\nJoin online: {online_link}"
     try:

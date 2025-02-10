@@ -185,6 +185,7 @@ def bookings():
         if events:
             click.echo("Schedule for another meeting at this time. select different time.")
             return
+        
     except HttpError as e:
         click.echo(f"Apologies an HTTP error occured: {e}")
         return
