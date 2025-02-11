@@ -10,6 +10,8 @@ from google.auth.transport.requests import Request
 from googleapiclient.errors import HttpError
 from availability import available_mentors, available_peers
 from calender import get_calendar
+
+
 @click.command()
 def bookings():
     '''Book a meeting with your peers or mentors.'''

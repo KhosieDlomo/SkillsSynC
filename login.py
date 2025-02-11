@@ -2,6 +2,7 @@ import click
 import pwinput
 from firebase_auth import auth, db
 from validation import valid_input
+import requests
 
 @click.command()
 def signin():
