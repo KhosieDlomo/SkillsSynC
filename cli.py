@@ -14,11 +14,6 @@ cli.add_command(signin)
 cli.add_command(signup)
 cli.add_command(reset_password)
 cli.add_command(signout)
-# cli.add_command(bookings)
-# cli.add_command(view_booking)
-# cli.add_command(cancel_booking)
-# cli.add_command(view_workshop)
-# cli.add_command(create_workshop)
 
 def main_menu():
     """Hello, Here is the Menu."""
@@ -69,7 +64,8 @@ def main_menu():
                 choice = click.prompt("Enter your choice", type=int)
 
                 if choice == 1:
-                    if signin(): 
+                    signin_successful = signin()
+                    if signin_successful: 
                         main_menu()
                         break 
                 elif choice == 2:

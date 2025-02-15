@@ -17,7 +17,7 @@ def signin():
         user_info = auth.get_account_info(user['idToken'])
         if not user_info['users'][0]['emailVerified']:
             click.echo('Error: Please verify your email first.')
-            return
+            return False
         
         user_doc = db.collection('users').document(user['localId']).get()
         if user_doc.exists:
@@ -32,15 +32,24 @@ def signin():
             return False
         
     except requests.exceptions.HTTPError as e:
-        error_response = e.response.json()
-        if error_response.get("error", {}).get("message") == "INVALID_LOGIN_CREDENTIALS":
-            click.echo("Invalid email or password. Please try again.")
-        else:
-            click.echo(f"An error occurred: {error_response.get('error', {}).get('message', 'Unknown error')}")
+        if e.response is not None:
+            try:
+                error_response = e.response.json()
+                if error_response.get("error", {}).get("message") == "INVALID_LOGIN_CREDENTIALS":
+                    click.echo("Invalid email or password. Please try again.")
+                else:
+                    click.echo(f"An error occurred: {error_response.get('error', {}).get('message', 'Unknown error')}")
+                
         # auth.current_user = user
+            except ValueError:
+                click.echo("Error decoding the error response.")
+        # return False
+        else:
+            click.echo("A network error occurred. Please check your connection and try again.")
+        return False
     except Exception as e:
         click.echo(f'Invalid credentials or the user does not exist : {e}')
-        return
+        return False
 
 @click.command()
 def signup():
