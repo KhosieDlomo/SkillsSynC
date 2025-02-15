@@ -3,10 +3,7 @@ import pwinput
 from firebase_auth import auth, db
 from validation import valid_input
 import requests
-
-logged_in = False
-user_role = None
-user_email = None
+from session import logged_in, user_email, user_role
 
 @click.command()
 def signin():
