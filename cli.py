@@ -1,5 +1,5 @@
 import click
-from login import signin, signup, signout, reset_password
+from login import * 
 from workshops import view_workshop, create_workshop
 from events import *
 
@@ -17,5 +17,62 @@ cli.add_command(cancel_booking)
 cli.add_command(view_workshop)
 cli.add_command(create_workshop)
 
+def main_menu():
+    """Hello, Here is the Menu."""
+    while True:
+        click.echo('\n--- Main Menu ---')
+        if logged_in:
+            click.echo(f"Logged in as {user_email} (Role: {user_role})")
+            click.echo("1. Book a Meeting")
+            click.echo("2. view Bookings")
+            click.echo("3. Cancel Booking")
+            click.echo("4. View Workshops")
+            if user_role == 'mentor':
+                click.echo("5. Create Workshop")
+            click.echo("6. Signout")
+            click.echo("7. Exit")
+            
+            choice = click.prompt("Enter your choice", type=int)
+
+            if choice == 1:
+                bookings()
+            elif choice == 2:
+                view_booking()
+            elif choice == 3:
+                cancel_booking()
+            elif choice == 4:
+                view_workshop()
+            elif choice == 5 and user_role == 'mentor':
+                create_workshop()
+            elif choice == 6:
+                signout()
+                break  
+            elif choice == 7:
+                click.echo("Exiting...")
+                exit()
+            else:
+                click.echo("Invalid choice. Please try again.")
+        else:
+            click.echo("1. Sign In")
+            click.echo("2. Sign Up")
+            click.echo("3. Reset Password")
+            click.echo("4. Exit")
+
+            choice = click.prompt("Enter your choice", type=int)
+
+            if choice == 1:
+                if signin(): 
+                    main_menu()
+                    break 
+            elif choice == 2:
+                signup()
+            elif choice == 3:
+                reset_password()
+            elif choice == 4:
+                click.echo("Exiting...")
+                exit()
+            else:
+                click.echo("Invalid choice. Please try again.")
+
 if __name__ =='__main__':
-    cli()
+    main_menu()

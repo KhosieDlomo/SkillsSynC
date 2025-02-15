@@ -3,6 +3,7 @@ import os
 import firebase_admin
 from firebase_admin import credentials
 from firebase_admin import firestore
+from login import logged_in
 from dotenv import load_dotenv
 import click
 
@@ -30,7 +31,7 @@ auth=firebase.auth()
 
 def require_auth():
     '''function to check and make sure that user loged in before using features.'''
-    if not auth.current_user:
+    if not logged_in:
         click.echo('Please sign up or sign in to use this feature.')
         return False
     return True

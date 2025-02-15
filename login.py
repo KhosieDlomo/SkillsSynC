@@ -4,9 +4,15 @@ from firebase_auth import auth, db
 from validation import valid_input
 import requests
 
+logged_in = False
+user_role = None
+user_email = None
+
 @click.command()
 def signin():
     """Welcome Back, Please Sign in"""
+    global logged_in, user_role, user_email
+
     email = click.prompt("Enter your email: ")
     password = pwinput.pwinput(prompt='Enter your Password: ', mask='#')
     try:
@@ -16,7 +22,18 @@ def signin():
             click.echo('Error: Please verify your email first.')
             return
         
-        click.echo(f'Successfully signed in {email}')
+        user_doc = db.collection('users').document(user['localId']).get()
+        if user_doc.exists:
+            user_data = user_doc.to_dict()
+            user_role = user_data.get('role')
+            user_email = email 
+            logged_in = True  
+            click.echo(f'Successfully signed in {email} (Role: {user_role})')
+            return True 
+        else:
+            click.echo("Error: Could not retrieve user role.")
+            return False
+        
     except requests.exceptions.HTTPError as e:
         error_response = e.response.json()
         if error_response.get("error", {}).get("message") == "INVALID_LOGIN_CREDENTIALS":
@@ -89,8 +106,12 @@ def reset_password():
 @click.command()
 def signout():
     '''Hate to see you leave, Come back soon...'''
+    global logged_in, user_email, user_role
     try:
         auth.current_user = None
+        logged_in = False  
+        user_role = None  
+        user_email = None
         click.echo('Signed out Successfully. Thank you for visiting. Goodbye')
     except Exception as e:
         click.echo(f'Run into an issue while signing out: {e}')
