@@ -3,7 +3,7 @@ import os
 import firebase_admin
 from firebase_admin import credentials
 from firebase_admin import firestore
-from login import logged_in
+from session import logged_in
 from dotenv import load_dotenv
 import click
 
