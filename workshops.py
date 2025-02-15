@@ -31,8 +31,14 @@ def create_workshop():
         click.echo('Please sign up or sign in to use this feature')
         return
     
-    user = db.collection('users').document(auth.current_user.uid).get()
-    if not user.exists or user.to_dict().get('role') != 'mentor':
+    user = auth.current_user
+    user_doc = db.collection('users').document(auth.current_user.uid).get()
+    if user_doc.exists:
+        role = user_doc.to_dict().get('role', 'peer')
+    else:
+        role = 'peer'
+        
+    if role != 'mentor':
         click.echo("Only mentors can create workshops")
         return
     

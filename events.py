@@ -10,13 +10,16 @@ from google.auth.transport.requests import Request
 from googleapiclient.errors import HttpError
 from availability import available_mentors, available_peers
 from calender import get_calendar
+
 @click.command()
 def bookings():
     '''Book a meeting with your peers or mentors.'''
 
     if not require_auth():
-        click.echo("Please sign up or sign in to use this feature")
+        # click.echo("Please sign up or sign in to use this feature")
         return
+    user = auth.current_user
+    click.echo(f"Fetching bookings for {user['email']}...")
     
     user_meeting = click.prompt('Want a (G)-for-Group session or a (O)-for-One-on-One session?', type=click.Choice(['G','O','g','o'])).lower()
     group_session = user_meeting == 'g'

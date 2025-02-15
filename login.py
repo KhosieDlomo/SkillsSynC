@@ -2,6 +2,7 @@ import click
 import pwinput
 from firebase_auth import auth, db
 from validation import valid_input
+import requests
 
 @click.command()
 def signin():
@@ -14,8 +15,15 @@ def signin():
         if not user_info['users'][0]['emailVerified']:
             click.echo('Error: Please verify your email first.')
             return
+        
         click.echo(f'Successfully signed in {email}')
-        auth.current_user = user
+    except requests.exceptions.HTTPError as e:
+        error_response = e.response.json()
+        if error_response.get("error", {}).get("message") == "INVALID_LOGIN_CREDENTIALS":
+            click.echo("Invalid email or password. Please try again.")
+        else:
+            click.echo(f"An error occurred: {error_response.get('error', {}).get('message', 'Unknown error')}")
+        # auth.current_user = user
     except Exception as e:
         click.echo(f'Invalid credentials or the user does not exist : {e}')
         return
