@@ -1,9 +1,7 @@
 import pyrebase
 import os
 import firebase_admin
-from firebase_admin import credentials
-from firebase_admin import firestore
-from session import logged_in
+from firebase_admin import firestore, credentials
 from dotenv import load_dotenv
 import click
 
@@ -29,9 +27,12 @@ db = firestore.client()
 firebase=pyrebase.initialize_app(Config)
 auth=firebase.auth()
 
-def require_auth():
-    '''function to check and make sure that user loged in before using features.'''
-    if not logged_in:
-        click.echo('Please sign up or sign in to use this feature.')
-        return False
-    return True
+def require_auth(user_id):
+    '''Checking and make sure that user loged in before using features, by querying Firestore.'''
+    try:
+        session = db.collection('sessions').document(user_id).get()
+        if not session.exists or not session.to_dict().get('logged_in'):
+            return False, "Please sign in to use this feature."
+        return True, "User is authenticated."
+    except Exception as e:
+        return False, f"Error checking authentication: {e}"

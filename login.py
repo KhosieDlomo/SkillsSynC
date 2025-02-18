@@ -3,6 +3,7 @@ import pwinput
 from firebase_auth import auth, db
 from validation import valid_input
 import requests
+from datetime import datetime
 from session import logged_in, user_email, user_role
 
 @click.command()
@@ -18,7 +19,9 @@ def signin():
         if not user_info['users'][0]['emailVerified']:
             click.echo('Error: Please verify your email first.')
             return False
-        
+         
+        #creating a session in Firestore
+        db.collection('sessions').document(user['localId']).set({'logged_in': True, 'email':email, 'role': 'user', 'last_active': datetime.now()})
         user_doc = db.collection('users').document(user['localId']).get()
         if user_doc.exists:
             user_data = user_doc.to_dict()
@@ -30,7 +33,7 @@ def signin():
         else:
             click.echo("Error: Could not retrieve user role.")
             return False
-        
+                
     except requests.exceptions.HTTPError as e:
         if e.response is not None:
             try:
@@ -40,13 +43,12 @@ def signin():
                 else:
                     click.echo(f"An error occurred: {error_response.get('error', {}).get('message', 'Unknown error')}")
                 
-        # auth.current_user = user
             except ValueError:
                 click.echo("Error decoding the error response.")
-        # return False
         else:
             click.echo("A network error occurred. Please check your connection and try again.")
         return False
+    
     except Exception as e:
         click.echo(f'Invalid credentials or the user does not exist : {e}')
         return False
