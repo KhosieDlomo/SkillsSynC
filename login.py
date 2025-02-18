@@ -1,6 +1,6 @@
 import click
 import pwinput
-from firebase_auth import auth, db
+from firebase_auth import auth, db, current_session
 from validation import valid_input
 import requests
 from datetime import datetime
@@ -22,6 +22,12 @@ def signin():
          
         #creating a session in Firestore
         db.collection('sessions').document(user['localId']).set({'logged_in': True, 'email':email, 'role': 'user', 'last_active': datetime.now()})
+        
+        # Updating the current session in memory
+        current_session['user_id'] = user['localId']
+        current_session['email'] = email
+        current_session['logged_in'] = True
+
         user_doc = db.collection('users').document(user['localId']).get()
         if user_doc.exists:
             user_data = user_doc.to_dict()
@@ -114,12 +120,15 @@ def reset_password():
 @click.command()
 def signout():
     '''Hate to see you leave, Come back soon...'''
-    global logged_in, user_email, user_role
+    if not current_session['logged_in']:
+        click.echo("No user is currently logged in.")
+        return
+
     try:
-        auth.current_user = None
-        logged_in = False  
-        user_role = None  
-        user_email = None
+        db.collection('sessions').document(current_session['user_id']).delete()
+        current_session['user_id'] = None
+        current_session['email'] = None
+        current_session['logged_in'] = False
         click.echo('Signed out Successfully. Thank you for visiting. Goodbye')
     except Exception as e:
         click.echo(f'Run into an issue while signing out: {e}')
