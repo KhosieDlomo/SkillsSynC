@@ -27,6 +27,13 @@ db = firestore.client()
 firebase=pyrebase.initialize_app(Config)
 auth=firebase.auth()
 
+#storing the current session
+current_session = {
+    'user_id': None,
+    'email': None,
+    'logged_in': False
+}
+
 def require_auth(user_id):
     '''Checking and make sure that user loged in before using features, by querying Firestore.'''
     try:
