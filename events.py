@@ -2,24 +2,24 @@ import datetime
 import os
 from login import signin, signup
 import click
-from firebase_auth import db, auth, require_auth
-from google.oauth2.credentials import Credentials 
-from google_auth_oauthlib.flow import InstalledAppFlow 
-from googleapiclient.discovery import build
-from google.auth.transport.requests import Request
+from firebase_auth import db, auth, require_auth, current_session
 from googleapiclient.errors import HttpError
 from availability import available_mentors, available_peers
 from calender import get_calendar
-from session import user_email
 
 @click.command()
 def bookings():
     '''Book a meeting with your peers or mentors.'''
 
-    if not require_auth():
+    if not current_session['user_id']:
         # click.echo("Please sign up or sign in to use this feature")
         return
-    user = auth.current_user
+    user_id =current_session["user_id"]
+    success, message = require_auth(user_id)
+    if not success:
+        click.echo(message)
+        return
+    
     click.echo(f"Fetching bookings for {user['email']}...")
     
     user_meeting = click.prompt('Want a (G)-for-Group session or a (O)-for-One-on-One session?', type=click.Choice(['G','O','g','o'])).lower()

@@ -4,7 +4,7 @@ from firebase_auth import auth, db, current_session
 from validation import valid_input
 import requests
 from datetime import datetime
-from session import logged_in, user_email, user_role
+from cli import main_menu
 
 @click.command()
 def signin():
@@ -35,6 +35,7 @@ def signin():
             user_email = email 
             logged_in = True  
             click.echo(f'Successfully signed in {email} (Role: {user_role})')
+            main_menu()
             return True 
         else:
             click.echo("Error: Could not retrieve user role.")
@@ -128,6 +129,7 @@ def signout():
         db.collection('sessions').document(current_session['user_id']).delete()
         current_session['user_id'] = None
         current_session['email'] = None
+        current_session['role'] = None
         current_session['logged_in'] = False
         click.echo('Signed out Successfully. Thank you for visiting. Goodbye')
     except Exception as e:

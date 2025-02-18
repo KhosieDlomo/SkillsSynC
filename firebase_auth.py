@@ -31,6 +31,7 @@ auth=firebase.auth()
 current_session = {
     'user_id': None,
     'email': None,
+    'role': None,
     'logged_in': False
 }
 
