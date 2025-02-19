@@ -8,8 +8,7 @@ from datetime import datetime
 @click.command()
 def signin():
     """Welcome Back, Please Sign in"""
-    global logged_in, user_role, user_email
-
+    print("signin() called")
     email = click.prompt("Enter your email: ")
     password = pwinput.pwinput(prompt='Enter your Password: ', mask='#')
     try:
@@ -17,27 +16,31 @@ def signin():
         user_info = auth.get_account_info(user['idToken'])
         if not user_info['users'][0]['emailVerified']:
             click.echo('Error: Please verify your email first.')
-            return False, None
+            print("Email not verified")
+            return False
          
-        #creating a session in Firestore
-        db.collection('sessions').document(user['localId']).set({'logged_in': True, 'email':email, 'role': 'user', 'last_active': datetime.now()})
-        
-        # Updating the current session in memory
-        current_session['user_id'] = user['localId']
-        current_session['email'] = email
-        current_session['logged_in'] = True
 
         user_doc = db.collection('users').document(user['localId']).get()
         if user_doc.exists:
             user_data = user_doc.to_dict()
             user_role = user_data.get('role')
-            user_email = email 
-            logged_in = True  
-            click.echo(f'Successfully signed in {email} (Role: {user_role})')
-            return True, user_role 
+            print(f"User role: {user_role}")
+
+            # Updating the current session in memory
+            current_session['user_id'] = user['localId']
+            current_session['email'] = email
+            current_session['role'] = user_role
+            current_session['logged_in'] = True
+            
+            #creating a session in Firestore
+            db.collection('sessions').document(user['localId']).set({'logged_in': True, 'email':email, 'role': 'user', 'last_active': datetime.now()})
+            
+            click.echo(f'Successfully signed in {email} with a {user_role} role: )')
+            return True 
         else:
             click.echo("Error: Could not retrieve user role.")
-            return False, user_role
+            print("Could not retrieve user role.")
+            return False
                 
     except requests.exceptions.HTTPError as e:
         if e.response is not None:

@@ -1,10 +1,12 @@
-from login import *
-from events import *
-from workshops import *
-from firebase_auth import *
+import click
+from login import signin, signup, reset_password, signout, current_session
+from events import view_booking, cancel_booking,bookings
+from workshops import view_workshop, create_workshop
+import firebase_admin
 
 def main_menu():
     """Hello, Here is the Menu."""
+    print("main_menu() called")
     try:
         while True:
             click.echo('\n--- Main Menu ---')
@@ -14,6 +16,7 @@ def main_menu():
                 click.echo("2. view Bookings")
                 click.echo("3. Cancel Booking")
                 click.echo("4. View Workshops")
+                
                 if current_session['role'] == 'mentor':
                     click.echo("5. Create Workshop")
                 click.echo("6. Signout")
@@ -54,8 +57,6 @@ def main_menu():
                 if choice == 1:
                     signin_successful = signin()
                     if signin_successful:
-                        current_session['role'] = user_role
-                        current_session['logged_in'] = True 
                         main_menu()
                         break 
                 elif choice == 2:

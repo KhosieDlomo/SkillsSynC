@@ -1,4 +1,3 @@
-import click
 from skillsSync import main_menu
 
 if __name__ == "__main__":
