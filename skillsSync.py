@@ -55,10 +55,8 @@ def main_menu():
                 choice = click.prompt("Enter your choice", type=int)
 
                 if choice == 1:
-                    signin_successful = signin()
-                    if signin_successful:
-                        main_menu()
-                        break 
+                    if signin():
+                        continue 
                 elif choice == 2:
                     signup()
                 elif choice == 3:

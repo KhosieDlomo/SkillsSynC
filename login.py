@@ -5,7 +5,6 @@ from validation import valid_input
 import requests
 from datetime import datetime
 
-@click.command()
 def signin():
     """Welcome Back, Please Sign in"""
     print("signin() called")
@@ -35,7 +34,7 @@ def signin():
             #creating a session in Firestore
             db.collection('sessions').document(user['localId']).set({'logged_in': True, 'email':email, 'role': 'user', 'last_active': datetime.now()})
             
-            click.echo(f'Successfully signed in {email} with a {user_role} role: )')
+            click.echo(f'Successfully signed in {email} (Role: {user_role})')
             return True 
         else:
             click.echo("Error: Could not retrieve user role.")
