@@ -2,6 +2,7 @@ from login import *
 from events import *
 from workshops import *
 from firebase_auth import *
+
 def main_menu():
     """Hello, Here is the Menu."""
     try:
@@ -52,7 +53,9 @@ def main_menu():
 
                 if choice == 1:
                     signin_successful = signin()
-                    if signin_successful: 
+                    if signin_successful:
+                        current_session['role'] = user_role
+                        current_session['logged_in'] = True 
                         main_menu()
                         break 
                 elif choice == 2:

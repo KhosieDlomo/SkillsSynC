@@ -4,7 +4,6 @@ from firebase_auth import auth, db, current_session
 from validation import valid_input
 import requests
 from datetime import datetime
-from cli import main_menu
 
 @click.command()
 def signin():
@@ -18,7 +17,7 @@ def signin():
         user_info = auth.get_account_info(user['idToken'])
         if not user_info['users'][0]['emailVerified']:
             click.echo('Error: Please verify your email first.')
-            return False
+            return False, None
          
         #creating a session in Firestore
         db.collection('sessions').document(user['localId']).set({'logged_in': True, 'email':email, 'role': 'user', 'last_active': datetime.now()})
@@ -35,11 +34,10 @@ def signin():
             user_email = email 
             logged_in = True  
             click.echo(f'Successfully signed in {email} (Role: {user_role})')
-            main_menu()
-            return True 
+            return True, user_role 
         else:
             click.echo("Error: Could not retrieve user role.")
-            return False
+            return False, user_role
                 
     except requests.exceptions.HTTPError as e:
         if e.response is not None:
