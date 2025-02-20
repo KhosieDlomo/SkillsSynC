@@ -12,7 +12,7 @@ def available_mentors(expertise = None, available =True):
         if expertise:
             mentors_ref = mentors_ref.where(filter=firestore.FieldFilter('expertise', '==', expertise))
         if available:
-            mentors_ref = mentors_ref.where('availability', '==', available)
+            mentors_ref = mentors_ref.where(filter=firestore.FieldFilter('availability', '==', available))
         
         mentors = mentors_ref.stream()
         
@@ -35,7 +35,7 @@ def available_mentors(expertise = None, available =True):
 def available_peers(expertise=None, available=True):
     '''Function to display all the available peers'''
     try:
-        peers_ref = db.collection('users').where('role', '==', 'peer')
+        peers_ref = db.collection('users').where(filter=firestore.FieldFilter('role', '==', 'peer'))
 
         if expertise:
             peers_ref = peers_ref.where(filter=firestore.FieldFilter('expertise', '==', expertise))
