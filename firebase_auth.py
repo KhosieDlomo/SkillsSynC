@@ -38,7 +38,9 @@ current_session = {
 def require_auth(user_id):
     '''Checking and make sure that user loged in before using features, by querying Firestore.'''
     try:
-        session = firestore.client().collection('sessions').document(user_id)
+        session_ref = firestore.client().collection('sessions').document(user_id)
+        session = session_ref.get()
+        
         if not session.exists or not session.to_dict().get('logged_in'):
             return False, "Please sign in to use this feature."
         return True, "User is authenticated."
