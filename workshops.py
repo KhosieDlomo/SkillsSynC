@@ -1,6 +1,6 @@
 import datetime
 import click
-from firebase_auth import db, auth, require_auth
+from firebase_auth import db, auth, require_auth, current_session
 from events import get_calendar
 from googleapiclient.errors import HttpError
 from login import signin, signup
@@ -9,8 +9,8 @@ from login import signin, signup
 @click.command()
 def view_workshop():
     """View all upcoming workshops and Available mentors and peers"""
-    if not require_auth():
-        click.echo('Please sign up or sign in to use this feature')
+    if not current_session['logged_in']:
+        # click.echo('Please sign up or sign in to use this feature')
         return
     
     try:
@@ -27,8 +27,8 @@ def view_workshop():
 @click.command()
 def create_workshop():
     '''Mentors creating workshops and make it compulsory for peers. Only Mentors should access this feature'''
-    if not require_auth():
-        click.echo('Please sign up or sign in to use this feature')
+    if not current_session['logged_in']:
+        # click.echo('Please sign up or sign in to use this feature')
         return
     
     user = auth.current_user
