@@ -7,7 +7,6 @@ from datetime import datetime
 
 def signin():
     """Welcome Back, Please Sign in"""
-    print("signin() called")
     email = click.prompt("Enter your email: ")
     password = pwinput.pwinput(prompt='Enter your Password: ', mask='#')
     try:
