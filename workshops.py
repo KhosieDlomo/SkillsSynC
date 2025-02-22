@@ -1,7 +1,8 @@
 import datetime
 import click
-from firebase_auth import db, auth, require_auth, current_session
+from firebase_auth import db, auth, current_session
 from events import get_calendar
+from google.cloud import firestore
 from googleapiclient.errors import HttpError
 from login import signin, signup
 
@@ -14,7 +15,7 @@ def view_workshop():
         return
     
     try:
-        workshops = db.collection('workshops').where('date', '>=', datetime.datetime.now().isoformat()).stream()
+        workshops = db.collection('workshops').where(filter=firestore.FieldFilter('date', '>=', datetime.datetime.now().isoformat())).stream()
         click.echo('Upcoming workshops')
 
         for workshop in workshops:
