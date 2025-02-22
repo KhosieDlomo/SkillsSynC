@@ -2,7 +2,7 @@ from firebase_auth import db
 import click
 from datetime import datetime
 from google.cloud import firestore
-
+from utils import handle_no_mentors_or_peers
 
 def available_mentors(expertise = None, available =True):
     """Functions to display available mentors"""
@@ -27,6 +27,7 @@ def available_mentors(expertise = None, available =True):
         
         if not mentor_lst:
             click.echo('No mentors available at the moment.')
+            handle_no_mentors_or_peers()
         return mentor_lst
     except Exception as e:
         click.echo(f"Error fetching mentors: {e}")
@@ -54,7 +55,7 @@ def available_peers(expertise=None, available=True):
         
         if not peers_lst:
             click.echo('No peers available at the moment.')
-            click.echo(f"Debug: Query filters - role=peer, expertise={expertise}, availability={available}")
+            handle_no_mentors_or_peers()
         return peers_lst
     except Exception as e:
         click.echo(f"Error while fetching peers: {e}")

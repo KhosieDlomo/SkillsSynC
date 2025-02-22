@@ -1,10 +1,11 @@
 import click
 from workshops import view_workshop, create_workshop
 from events import view_booking, cancel_booking
-from skillsSync import main_menu
 
 def handle_no_mentors_or_peers():
     """Handles where no mentors or peers are available."""
+    from main import main_menu
+    
     click.echo("\n⚠ No mentors or peers are available at the moment.")
     click.echo("\nWould you like to:")
     click.echo("1. View bookings?")
@@ -13,7 +14,7 @@ def handle_no_mentors_or_peers():
     click.echo("4. Create workshops?")
     click.echo("5. Return to the main menu.")
     
-    choice = click.prompt("Enter your choice", type=int)
+    choice = click.prompt("Ente r your choice", type=int)
     
     if choice == 1:
         view_booking()

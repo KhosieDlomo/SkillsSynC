@@ -2,7 +2,7 @@ from login import signin, signup
 import click
 from firebase_auth import db, current_session
 from calender import get_calendar
-from booking import bookings
+from book_meetings import bookings
 
 @click.command()
 def view_booking():
@@ -56,5 +56,5 @@ def cancel_booking():
         click.echo(f"Error canceling booking: {e}")
 
 if __name__ == '__main__':
-    cli = click.CommandCollection(sources=[bookings, view_booking, cancel_booking, signup, signin])
+    cli = click.CommandCollection(sources=[ view_booking, cancel_booking, signup, signin])
     cli()
