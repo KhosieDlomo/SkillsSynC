@@ -6,7 +6,6 @@ import firebase_admin
 
 def main_menu():
     """Hello, Here is the Menu."""
-    print("main_menu() called")
     try:
         while True:
             click.echo('\n--- Main Menu ---')

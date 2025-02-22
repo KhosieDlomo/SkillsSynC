@@ -1,10 +1,8 @@
 import click
 from workshops import view_workshop, create_workshop
-from events import view_booking, cancel_booking
 
 def handle_no_mentors_or_peers():
     """Handles where no mentors or peers are available."""
-    from main import main_menu
     
     click.echo("\n⚠ No mentors or peers are available at the moment.")
     click.echo("\nWould you like to:")
@@ -17,14 +15,17 @@ def handle_no_mentors_or_peers():
     choice = click.prompt("Ente r your choice", type=int)
     
     if choice == 1:
+        from events import view_booking
         view_booking()
     elif choice == 2:
         view_workshop()  
     elif choice == 3:
+        from events import cancel_booking
         cancel_booking()
     elif choice == 4:
         create_workshop()
     elif choice == 5:
+        from main import main_menu
         main_menu()
     else:
         click.echo("Invalid choice. Returning to the main menu.")
