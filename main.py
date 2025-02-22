@@ -66,7 +66,7 @@ def main_menu():
                         firebase_admin.delete_app(firebase_admin.get_app())
                     except ValueError:
                         pass
-                    click.echo("Exiting...")
+                    click.echo("Signing you out...")
                     exit()
                 else:
                     click.echo("Invalid choice. Please try again.")

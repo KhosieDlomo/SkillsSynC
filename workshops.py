@@ -10,26 +10,39 @@ from login import signin, signup
 @click.command()
 def view_workshop():
     """View all upcoming workshops and Available mentors and peers"""
+    from main import main_menu
+
     if not current_session['logged_in']:
-        # click.echo('Please sign up or sign in to use this feature')
         return
     
     try:
         workshops = db.collection('workshops').where(filter=firestore.FieldFilter('date', '>=', datetime.datetime.now().isoformat())).stream()
-        click.echo('Upcoming workshops')
-
+        all_workshop = []
         for workshop in workshops:
             data = workshop.to_dict()
-            click.echo(f'Title: {data['Title']}, Date: {data['Date']}, Time: {data['start_time']} - {data['end_time']}, Mentors: {', '.join(data.get('mentors', []))}, Peers: {', '.join(data.get('peers',[]))}')
+            all_workshop.append(data)
+        
+        all_workshop.sort(key=lambda i: datetime.datetime.strptime(i['Date'], '%d/%m/%Y'))
+        if not all_workshop:
+            click.echo('No upcoming workshops found.')
+            main_menu()
+            return
+        
+        click.echo('Upcoming workshops')
+        for workshop in all_workshop:
+            click.echo(f'Title: {workshop['Title']}, Date: {workshop['Date']}, Time: {workshop['start_time']} - {workshop['end_time']}, Mentors: {', '.join(workshop.get('mentors', []))}, Peers: {', '.join(workshop.get('peers',[]))}')
+            main_menu()
     
     except Exception as e:
         click.echo(f'Error while fetching upcoming workshops: {e}')
+        main_menu()
 
 @click.command()
 def create_workshop():
     '''Mentors creating workshops and make it compulsory for peers. Only Mentors should access this feature'''
+    from main import main_menu
+
     if not current_session['logged_in']:
-        # click.echo('Please sign up or sign in to use this feature')
         return
     
     user = auth.current_user
@@ -41,6 +54,7 @@ def create_workshop():
         
     if role != 'mentor':
         click.echo("Only mentors can create workshops")
+        main_menu()
         return
     
     service = get_calendar()
@@ -63,10 +77,12 @@ def create_workshop():
         end_hour = datetime.datetime.strptime(f'{date} {end_time}', '%d/%m/%Y %H:%M')
     except ValueError:
         click.echo('Invalid date or time format, please use DD/MM/YYYY HH:MM')
+        main_menu()
         return
     
     if start_hour.weekday() >= 5 or start_hour.hour < 7 or end_hour.hour > 17:
         click.echo("Error! Meetings are only allowed on weekdays between 07:00 to 17:00.")
+        main_menu()
         return
     
     time_min = start_hour.isoformat() + 'Z'
@@ -77,9 +93,11 @@ def create_workshop():
         
         if events:
             click.echo("Schedule for another meeting at this time. select different time.")
+            main_menu()
             return
     except HttpError as e:
         click.echo(f'Error while fetching Events from the calender {e}')
+        main_menu()
         return
     
     peers = db.collection('users').where('role', '==', 'peer').stream()
@@ -121,10 +139,13 @@ def create_workshop():
         }
         db.collection('workshops').add(workshop_data)
         click.echo('Workshop created and all peers added successfully.')
+        main_menu()
     except HttpError as error:
-        print(f"An error occured while creating event: {error}")
+        click.echo(f"An error occured while creating event: {error}")
+        main_menu()
     except Exception as e:
         click.echo(f'Failed to create workshop: {e}')
+        main_menu()
 
 if __name__ == '__main__':
     cli = click.CommandCollection(sources=[view_workshop, create_workshop, signup, signin])
