@@ -2,7 +2,7 @@ from login import signin, signup
 import click
 from firebase_auth import db, current_session
 from calender import get_calendar
-from book_meetings import bookings
+from google.cloud import firestore
 
 @click.command()
 def view_booking():
@@ -14,14 +14,19 @@ def view_booking():
     email = click.prompt("Enter your email to fetch bookings: ")
 
     try:
-        booking_ref = db.collection('meetings').where('attendees', 'array_contains', email)
+        booking_ref = db.collection('meetings').where(filter=firestore.FieldFilter('attendees', 'array_contains', email))
         bookings = booking_ref.stream()
 
         click.echo(f'Bookings for {email}:')
+        booking_found = False
 
         for booking in bookings:
             data = booking.to_dict()
             click.echo(f"Subject: {data['subject']}, Date: {data['date']}, Time: {data['start_time']} - {data['end_time']}, Event ID: {data['google_event_id']}")
+            booking_found = True
+        
+        if not booking_found:
+            click.echo("No bookings found for this email address.")
     except Exception as e:
         click.echo(f"Error fetching bookings: {e}")
 
@@ -44,7 +49,7 @@ def cancel_booking():
         service.events().delete(calendarId='primary', eventId=event_id).execute()
 
         try:      
-            meeting_ref = db.collection('meetings').where('google_event_id', '==', event_id)
+            meeting_ref = db.collection('meetings').where(filter=firestore.FieldFilter('google_event_id', '==', event_id))
             meetings = meeting_ref.stream()
             
             for meeting in meetings:
