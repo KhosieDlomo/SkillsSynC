@@ -1,6 +1,7 @@
 import click
 from login import signin, signup, reset_password, signout, current_session
-from events import view_booking, cancel_booking,bookings
+from events import view_booking, cancel_booking
+from book_meetings import bookings
 from workshops import view_workshop, create_workshop
 import firebase_admin
 
