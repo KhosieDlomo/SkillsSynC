@@ -25,6 +25,7 @@ def bookings():
         click.echo("You've selected a group session")
         expertise = click.prompt('Enter desired expertise (optional)', default="")
         language = click.prompt("Enter desired language (optional)", default="")
+        
         mentors = available_mentors(expertise=expertise, language=language)
         peers = available_peers(expertise=expertise, language=language)
 
