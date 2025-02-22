@@ -23,9 +23,14 @@ def bookings():
     group_session = user_meeting == 'g'
     if group_session:
         click.echo("You've selected a group session")
-        expertise = click.prompt('Enter desired expertise (optional)', default="")
-        language = click.prompt("Enter desired language (optional)", default="")
-        
+        expertise = click.prompt('Enter desired expertise (optional)', default="", show_default=False).strip()
+        language = click.prompt("Enter desired language (optional)", default="", show_default=False).strip()
+
+        if expertise is None:
+            expertise = ""
+        if language is None:
+            language = ""
+                    
         mentors = available_mentors(expertise=expertise, language=language)
         peers = available_peers(expertise=expertise, language=language)
 

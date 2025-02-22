@@ -14,7 +14,7 @@ def handle_no_mentors_or_peers():
         click.echo("4. Create workshops")
     click.echo("5. Return to the main menu.")
     
-    choice = click.prompt("Ente r your choice", type=int)
+    choice = click.prompt("Enter your choice", type=int)
     
     if choice == 1:
         from events import view_booking

@@ -7,7 +7,7 @@ from datetime import datetime
 
 def signin():
     """Welcome Back, Please Sign in"""
-    email = click.prompt("Enter your email: ")
+    email = click.prompt("Enter your email ")
     password = pwinput.pwinput(prompt='Enter your Password: ', mask='#')
     try:
         user = auth.sign_in_with_email_and_password(email, password)
