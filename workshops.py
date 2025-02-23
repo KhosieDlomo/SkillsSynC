@@ -45,15 +45,15 @@ def create_workshop():
     if not current_session['logged_in']:
         return
     
-    user_uid = current_session.get('user_uid')
+    user_id = current_session.get('user_id')
     user_email = current_session.get('email')
 
-    if not user_uid or not user_email:
+    if not user_id or not user_email:
         click.echo("User not authenticated. Please sign in.")
         main_menu()
         return
 
-    user_doc = db.collection('users').document(user_uid).get()
+    user_doc = db.collection('users').document(user_id).get()
     if user_doc.exists:
         role = user_doc.to_dict().get('role', 'peer')
     else:

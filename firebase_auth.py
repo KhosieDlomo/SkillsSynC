@@ -3,7 +3,6 @@ import os
 import firebase_admin
 from firebase_admin import firestore, credentials
 from dotenv import load_dotenv
-import click
 
 load_dotenv()
 
