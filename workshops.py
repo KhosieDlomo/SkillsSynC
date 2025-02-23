@@ -102,7 +102,10 @@ def create_workshop():
         events = event_result.get('items', [])
         
         if events:
-            click.echo("Schedule for another meeting at this time. select different time.")
+            click.echo("Conflicting events found during the specified time.")
+            for event in events:
+                click.echo(f"Event: {event.get('summary')}, Start: {event.get('start')}, End: {event.get('end')}")
+            click.echo("Please select a different time.")
             main_menu()
             return
         
