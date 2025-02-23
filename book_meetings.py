@@ -101,6 +101,7 @@ def book_session(service, subject, start_hour, end_hour, location, attendees, on
             'date': start_hour.strftime('%d/%m/%Y'),
             'start_time': start_hour.isoformat(),
             'end_time': end_hour.isoformat(),
+            'organizer': current_session['email'],
             'attendees': attendees,
             'location': location,
             'status': 'confirmed',

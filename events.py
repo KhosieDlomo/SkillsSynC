@@ -13,22 +13,58 @@ def view_booking():
         return
     
     email = current_session['email']
-    click.echo(f"Fetching bookings...")
+    click.echo(f"Fetching bookings for {email}")
 
     try:
+        requested_bookings_ref = db.collection('meetings').where(filter=firestore.FieldFilter('organizer', '==', email))
+        requested_bookings = list(requested_bookings_ref.stream())
+
         booking_ref = db.collection('meetings').where(filter=firestore.FieldFilter('attendees', 'array_contains', email))
         bookings = list(booking_ref.stream())
 
-        click.echo(f'Bookings for {email}:')
-        if not bookings:
+        all_bookings = requested_bookings + bookings
+        unique_bookings = {booking.id: booking for booking in all_bookings}.values()
+
+        if not unique_bookings:
             click.echo("⚠ No bookings found for this email address.")
             main_menu()
             return
 
-        click.echo(f'Bookings for {email}:')
+        click.echo(f'\n Your Bookings...')
         for booking in bookings:
             data = booking.to_dict()
-            click.echo(f"Subject: {data['subject']}, Date: {data['date']}, Time: {data['start_time']} - {data['end_time']}, Event ID: {data['google_event_id']}")
+            subject = data.get('subject', 'No Subject')
+            date = data.get('date', 'Unknown Date')
+            start_time = data.get('start_time', 'Unknown Start Time')
+            end_time = data.get('end_time', 'Unknown End Time')
+            organizer = data.get('organizer', 'Unknown Organizer')
+            attendees = data.get('attendees', [])
+            status = data.get('status', 'pending')
+            location = data.get('location', 'Unknown Location')
+            google_event_id = data.get('google_event_id', 'No Event ID')
+
+            try:
+                from datetime import datetime
+                start_time_obj = datetime.fromisoformat(start_time)
+                end_time_obj = datetime.fromisoformat(end_time)
+                formatted_start_time = start_time_obj.strftime('%I:%M %p')
+                formatted_end_time = end_time_obj.strftime('%I:%M %p')
+                formatted_date = start_time_obj.strftime('%A, %d %B %Y')
+            except ValueError:
+                formatted_start_time = start_time
+                formatted_end_time = end_time
+                formatted_date = date
+
+            click.echo(f"\n📅 {formatted_date}")
+            click.echo(f"🕒 {formatted_start_time} - {formatted_end_time}")
+            click.echo(f"📌 {location}")
+            click.echo(f"📝 Subject: {subject}")
+            click.echo(f"👤 Organizer: {organizer}")
+            click.echo(f"👥 Attendees: {', '.join(attendees)}")
+            click.echo(f"🔍 Status: {status}")
+            click.echo(f"🔗 Event ID: {google_event_id}")
+            click.echo("-" * 40)  
+            
         main_menu()
                     
     except Exception as e:
