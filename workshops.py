@@ -30,7 +30,7 @@ def view_workshop():
         
         click.echo('Upcoming workshops')
         for workshop in all_workshop:
-            click.echo(f'Title: {workshop['Title']}, Date: {workshop['Date']}, Time: {workshop['start_time']} - {workshop['end_time']}, Mentors: {', '.join(workshop.get('mentors', []))}, Peers: {', '.join(workshop.get('peers',[]))}')
+            click.echo(f"Title: {workshop['Title']}, Date: {workshop['Date']}, Time: {workshop['start_time']} - {workshop['end_time']}, Mentors: {', '.join(workshop.get('mentors', []))}, Peers: {', '.join(workshop.get('peers',[]))}")
             main_menu()
     
     except Exception as e:
@@ -45,8 +45,15 @@ def create_workshop():
     if not current_session['logged_in']:
         return
     
-    user = auth.current_user
-    user_doc = db.collection('users').document(auth.current_user.uid).get()
+    user_uid = current_session.get('user_uid')
+    user_email = current_session.get('email')
+
+    if not user_uid or not user_email:
+        click.echo("User not authenticated. Please sign in.")
+        main_menu()
+        return
+
+    user_doc = db.collection('users').document(user_uid).get()
     if user_doc.exists:
         role = user_doc.to_dict().get('role', 'peer')
     else:
@@ -59,22 +66,25 @@ def create_workshop():
     
     service = get_calendar()
     if not service:
+        click.echo("Failed to initialize Google Calendar service.")
+        main_menu()
         return
 
-    title = click.prompt('Workshop title: ')
-    description = click.prompt('About the workshop: ')
-    date = click.prompt("Date of the workshop(DD/MM/YYYY): ")
-    start_time = click.prompt('Workshop start time(HH:MM): ')
-    end_time = click.prompt('Workshop end_time (HH:MM): ')
-    location = click.prompt('Workshop location: ')
+    title = click.prompt('Workshop title ')
+    description = click.prompt('About the workshop ')
+    date = click.prompt("Date of the workshop(DD/MM/YYYY) ")
+    start_time = click.prompt('Workshop start time(HH:MM) ')
+    end_time = click.prompt('Workshop end_time (HH:MM) ')
+    location = click.prompt('Workshop location ')
 
     online_link = None
     if location == 'online'.lower():
-        online_link = click.prompt("Enter the online meeting link,")
+        online_link = click.prompt("Enter the online meeting link ")
 
     try:
         start_hour = datetime.datetime.strptime(f'{date} {start_time}', '%d/%m/%Y %H:%M')
         end_hour = datetime.datetime.strptime(f'{date} {end_time}', '%d/%m/%Y %H:%M')
+
     except ValueError:
         click.echo('Invalid date or time format, please use DD/MM/YYYY HH:MM')
         main_menu()
@@ -95,25 +105,31 @@ def create_workshop():
             click.echo("Schedule for another meeting at this time. select different time.")
             main_menu()
             return
+        
     except HttpError as e:
         click.echo(f'Error while fetching Events from the calender {e}')
         main_menu()
         return
     
-    peers = db.collection('users').where('role', '==', 'peer').stream()
+    peers = db.collection('users').where(filter=firestore.FieldFilter('role', '==', 'peer')).stream()
     peers_email = []
     for peer in peers:
-        if peer.exist:
+        if peer.exists:
             peer_email = peer.to_dict().get('email')
             if peer_email:
                 peers_email.append(peer_email)
+
+    if user_email:
+        peers_email.append(user_email)
+
+    attendees = [{'email': email.strip()} for email in peers_email]
     
     event = {'title': title,
              'description': description,
              'location': location,
              'start': {'dateTime': start_hour.isoformat(), 'timeZone': 'UTC'},
              'end': {'dateTime': end_hour.isoformat(), 'timeZone': 'UTC'},
-             'attandees': [{'email': email.strip()} for email in peers_email],
+             'attendees': attendees,
              'reminders': {'useDefault': False,
                       'overrides': [{'method': 'email', 'minutes': 24 * 60},
                                      {'method': 'popup', 'minutes': 15},
@@ -132,7 +148,7 @@ def create_workshop():
             'start_time': start_hour.isoformat(),
             'end_time': end_hour.isoformat(),
             'location': location,
-            'mentors': [auth.current_user.email],
+            'mentors': [user_email],
             'peers': peers_email,
             'google_event_id': event_result.get('id'),
             'online_link': online_link
