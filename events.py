@@ -17,19 +17,20 @@ def view_booking():
 
     try:
         booking_ref = db.collection('meetings').where(filter=firestore.FieldFilter('attendees', 'array_contains', email))
-        bookings = booking_ref.stream()
+        bookings = list(booking_ref.stream())
 
         click.echo(f'Bookings for {email}:')
-        booking_found = False
+        if not bookings:
+            click.echo("⚠ No bookings found for this email address.")
+            main_menu()
+            return
 
+        click.echo(f'Bookings for {email}:')
         for booking in bookings:
             data = booking.to_dict()
             click.echo(f"Subject: {data['subject']}, Date: {data['date']}, Time: {data['start_time']} - {data['end_time']}, Event ID: {data['google_event_id']}")
-            booking_found = True
-                    
-        if not booking_found:
-            click.echo("⚠ No bookings found for this email address.")
         main_menu()
+                    
     except Exception as e:
         click.echo(f"Error fetching bookings: {e}")
         main_menu()
