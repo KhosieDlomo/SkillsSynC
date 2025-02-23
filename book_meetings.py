@@ -36,36 +36,76 @@ def update_booking(db, google_event_id, new_start_hour, new_end_hour):
     """Updates an existing booking in Firestore and Google Calendar."""
     try:
         meetings_ref = db.collection('meetings')
-        query = meetings_ref.where(filter=firestore.FieldFilter('google_event_id', '==', google_event_id)).limit(1) # Use limit to optimize
+        query = meetings_ref.where(filter=firestore.FieldFilter('google_event_id', '==', google_event_id)).limit(1) 
 
-        results = query.stream()
+        meetings = query.stream()
 
-        for meeting in results:
+        for meeting in meetings:
             meeting_data = meeting.to_dict()
             meeting_id = meeting.id
             print(f"found meeting: {meeting_id}")
 
-        service = get_calendar()
-        if not service:
-            click.echo("Failed to initialize Google Calendar service.")
+            service = get_calendar()
+            if not service:
+                click.echo("Failed to initialize Google Calendar service.")
+                return
+
+            event = service.events().get(calendarId='primary', eventId=google_event_id).execute()
+            event['start']['dateTime'] = new_start_hour.isoformat()
+            event['end']['dateTime'] = new_end_hour.isoformat()
+
+            updated_event = service.events().update(calendarId='primary', eventId=google_event_id, body=event, sendUpdates='all').execute()
+
+            
+            db.collection('meetings').document(meeting_id).update({
+                'start_time': new_start_hour.isoformat(),
+                'end_time': new_end_hour.isoformat()
+            })
+
+            click.echo(f"Booking updated successfully: {updated_event.get('htmlLink')}")
             return
-
-        event = service.events().get(calendarId='primary', eventId=google_event_id).execute()
-        event['start']['dateTime'] = new_start_hour.isoformat()
-        event['end']['dateTime'] = new_end_hour.isoformat()
-
-        updated_event = service.events().update(calendarId='primary', eventId=google_event_id, body=event, sendUpdates='all').execute()
-
-        
-        db.collection('meetings').document(meeting_id).update({
-            'start_time': new_start_hour.isoformat(),
-            'end_time': new_end_hour.isoformat()
-        })
-
-        click.echo(f"Booking updated successfully: {updated_event.get('htmlLink')}")
+        click.echo("No matching bookings found.")
 
     except Exception as e:
         click.echo(f"An error occurred while updating the booking: {e}")
+
+def book_session(service, subject, start_hour, end_hour, location, attendees, online_link=None):
+    """Book a session and save it to Firestore."""
+    event = {
+        'summary': subject,
+        'location': location,
+        'start': {'dateTime': start_hour.isoformat(), 'timeZone': 'UTC'},
+        'end': {'dateTime': end_hour.isoformat(), 'timeZone': 'UTC'},
+        'attendees': [{'email': email.strip()} for email in attendees],
+        'reminders': {
+            'useDefault': False,
+            'overrides': [
+                {'method': 'email', 'minutes': 24 * 60},
+                {'method': 'popup', 'minutes': 15},
+            ],
+        },
+    }
+    if online_link:
+        event['description'] = f"{event.get('description', '')}\nJoin online: {online_link}"
+
+    try:
+        event_result = service.events().insert(calendarId='primary', body=event, sendUpdates='all').execute()
+        db.collection('meetings').add({
+            'subject': subject,
+            'date': start_hour.strftime('%d/%m/%Y'),
+            'start_time': start_hour.isoformat(),
+            'end_time': end_hour.isoformat(),
+            'attendees': attendees,
+            'location': location,
+            'status': 'confirmed',
+            'google_event_id': event_result.get('id'),
+            'online_link': online_link
+        })
+        click.echo(f"Event created successfully: {event_result.get('htmlLink')}")
+    except HttpError as error:
+        click.echo(f"An error occurred: {error}")
+    except Exception as e:
+        click.echo(f"An error occurred while creating the event: {e}")
 
 @click.command()
 def bookings():
@@ -89,10 +129,10 @@ def bookings():
         expertise = click.prompt('Enter desired expertise (optional)', default="", show_default=False).strip()
         language = click.prompt("Enter desired language (optional)", default="", show_default=False).strip()
 
-        if expertise is None:
-            expertise = ""
-        if language is None:
-            language = ""
+        # if expertise is None:
+        #     expertise = ""
+        # if language is None:
+        #     language = ""
                     
         mentors = available_mentors(expertise=expertise, language=language)
         peers = available_peers(expertise=expertise, language=language)
@@ -149,44 +189,14 @@ def bookings():
         
         time_min = start_hour.isoformat() + 'Z'
         time_max = end_hour.isoformat() + 'Z'
-        attendees =[]
-
-        for person in selected_members:
-            attendees.append({'email': person['email']})
-        attendees.append({'email': auth.current_user['email']})
+        attendees =[person['email'] for person in selected_members]
+        attendees.append(auth.current_user['email'])
 
         service = get_calendar()
         if not service:
             return
         
-        event = {'summary': subject,
-                    'location': location,
-                    'start':{'dateTime': start_hour.isoformat(), 'timeZone': 'UTC'},
-                    'end':{'dateTime': end_hour.isoformat(), 'timeZone': 'UTC'},
-                    'attendees': [{'email': email.strip()} for email in attendees],
-                    'remainder': {'useDefault': False,
-                                'override': [{'method': 'email','minutes':24 * 60},
-                                            {'method':'popup', 'minutes': 15}],
-                                },
-                }
-        if online_link:
-            event['description'] = f"{event.get('descriptio', '')}\nJoin online: {online_link}"
-        try:
-            event_result = service.events().insert(calendarId='primary', body=event,sendUpdates='all').execute()
-            db.collection('meetings').add({'subject': subject,
-                                            'date': date,
-                                            'start_time':start_hour.isoformat(),
-                                            'attendees':[person['email'] for person in selected_members],
-                                            'location': location,
-                                            'status':'confirmed',
-                                            'google_event_id': event_result.get('id'),
-                                            'online_link': online_link
-                                         })
-            click.echo(f"Event created successfully: {event_result.get('htmlLink')}")
-        except HttpError as error:
-            click.echo(f"An error occured: {error}")
-        except Exception as e:
-            click.echo(f"An error occured while creating group events: {e}")
+        book_session(service, subject, start_hour, end_hour, location, attendees, online_link)
     
     else:
         click.echo('\nFetching available mentors and peers...')
@@ -228,25 +238,18 @@ def bookings():
                 try:
                     select_peer = int(click.prompt('Select the Peer(e.g., 1, 2, 3, etc...).')) - 1
                     if 0 <= select_peer < len(peers):
+                        chosen_person = peers[select_peer]
                         break
                     else:
                         click.echo('Invalid Selection!')
                 except ValueError:
                     click.echo('Invalid input. Please enter a number (e.g., 1, 2, 3, etc...).')
-            chosen_person = peers[select_peer]
-
-        
-    # service = get_calendar()
-    # if not service:
-    #     return
 
     subject = click.prompt('Event subject: ')
     date = click.prompt('Event date(DD/MM/YYYY): ')
     start_time = click.prompt('Event start time (HH:MM): ')
     end_time = click.prompt('Event end time (HH:MM): ')
     location = click.prompt('Event Location (e.g: "Online" or a physical address): ')
-    
-    attendees = [chosen_person['email']]
 
     online_link = None
     if location == 'online'.lower():
@@ -262,50 +265,23 @@ def bookings():
     if start_hour.weekday() >= 5 or start_hour.hour < 7 or end_hour.hour > 17:
         click.echo("Error! Meetings are only allowed on weekdays between 07:00 to 17:00.")
         return
-
-    time_min = start_hour.isoformat() + 'Z'
-    time_max = end_hour.isoformat() + 'Z'
-    try:
-        event_result = service.events().list( calendarId='primary', timeMin=time_min, timeMax=time_max, singleEvents=True).execute()
-        events = event_result.get('items', [])
-
-        if events:
-            click.echo("Schedule for another meeting at this time. select different time.")
-            return
-        
-    except HttpError as e:
-        click.echo(f"Apologies an HTTP error occured: {e}")
+    service = get_calendar()
+    if not service:
         return
 
+    if not is_mentor_available(service, chosen_person['email'], start_hour, end_hour):
+            click.echo("The selected mentor/peer is not available at the chosen time.")
+            new_start_hour, new_end_hour = find_next_available_slot(service, chosen_person['email'], start_hour, (end_hour - start_hour).seconds // 3600)
+            if new_start_hour and new_end_hour:
+                click.echo(f"Next available slot: {new_start_hour.strftime('%d/%m/%Y %H:%M')} to {new_end_hour.strftime('%H:%M')}")
+                reschedule = click.prompt("Would you like to reschedule? (Y/N)", type=click.Choice(['Y', 'N', 'y', 'n'])).lower()
+                if reschedule == 'y':
+                    start_hour, end_hour = new_start_hour, new_end_hour
+                else:
+                    return
+            else:
+                click.echo("No available slots found.")
+                return
 
-    event = {'summary': subject,
-                'location' : location,
-                'start':{'dateTime': start_hour.isoformat(), 'timeZone': 'UTC'},
-                'end':{'dateTime': end_hour.isoformat(), 'timeZone': 'UTC'},
-                'attendees': [{'email': email.strip()} for email in attendees],
-                'reminders': {'useDefault': False,
-                            'overrides' : [{'method':'email', 'minutes': 24 * 60},
-                                            {'method': 'popup', 'minutes': 15},
-                                            ],
-                            },
-            }  
-    if online_link:
-            event['description'] = f"{event.get('description', '')}\nJoin online: {online_link}"  
-    try:
-        event_result = service.events().insert(calendarId='primary', body=event,sendUpdates='all').execute()
-        db.collection('meetings').add({
-            'subject': subject,
-            'date': date,
-            'start_time': start_hour.isoformat(),
-            'end_time': end_hour.isoformat(),
-            'attendees': attendees,
-            'location': location,  
-            'status': 'confirmed',
-            'google_event_id': event_result.get('id'), 
-            'online_link':online_link
-        })
-        click.echo(f'Event created successfully: {event_result.get('htmlLink')}') 
-
-
-    except HttpError as error:
-        print(f'An error occured: {error}')
+    attendees = [chosen_person['email']]
+    book_session(service, subject, start_hour, end_hour, location, attendees, online_link)
