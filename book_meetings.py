@@ -5,11 +5,17 @@ from googleapiclient.errors import HttpError
 from availability import available_mentors, available_peers
 from google.cloud import firestore
 from calender import get_calendar
+import pytz
+
+SAST = pytz.timezone('Africa/Johannesburg')
 
 def is_mentor_available(service, mentor_email, start_hour, end_hour):
     """Checking if a mentor is available in their Google Calendar."""
-    time_min = start_hour.isoformat() + 'Z'
-    time_max = end_hour.isoformat() + 'Z'
+    start_hour_utc = start_hour.astimezone(pytz.UTC)
+    end_hour_utc = end_hour.astimezone(pytz.UTC)
+
+    time_min = start_hour_utc.isoformat()
+    time_max = end_hour_utc.isoformat()
     try:
         event_result = service.events().list(calendarId='primary', timeMin=time_min, timeMax=time_max, singleEvents=True).execute()
         events = event_result.get('items', [])
@@ -74,8 +80,8 @@ def book_session(service, subject, start_hour, end_hour, location, attendees, on
     event = {
         'summary': subject,
         'location': location,
-        'start': {'dateTime': start_hour.isoformat(), 'timeZone': 'UTC'},
-        'end': {'dateTime': end_hour.isoformat(), 'timeZone': 'UTC'},
+        'start': {'dateTime': start_hour.isoformat(), 'timeZone': 'Africa/Johannesburg'},
+        'end': {'dateTime': end_hour.isoformat(), 'timeZone': 'Africa/Johannesburg'},
         'attendees': [{'email': email.strip()} for email in attendees],
         'reminders': {
             'useDefault': False,
@@ -129,11 +135,6 @@ def bookings():
         expertise = click.prompt('Enter desired expertise (optional)', default="", show_default=False).strip()
         language = click.prompt("Enter desired language (optional)", default="", show_default=False).strip()
 
-        # if expertise is None:
-        #     expertise = ""
-        # if language is None:
-        #     language = ""
-                    
         mentors = available_mentors(expertise=expertise, language=language)
         peers = available_peers(expertise=expertise, language=language)
 
@@ -167,11 +168,11 @@ def bookings():
             click.echo("No members selected for group session.")
             return
         
-        subject = click.prompt('Event subject: ')
-        date = click.prompt('Event date(DD/MM/YYYY): ')
-        start_time = click.prompt('Event start time (HH:MM): ')
-        end_time = click.prompt('Event end time (HH:MM): ')
-        location = click.prompt('Event Location (e.g: "Online" or a physical address): ')
+        subject = click.prompt('Event subject ')
+        date = click.prompt('Event date(DD/MM/YYYY) ')
+        start_time = click.prompt('Event start time (HH:MM) ')
+        end_time = click.prompt('Event end time (HH:MM) ')
+        location = click.prompt('Event Location (e.g: "Online" or a physical address) ')
         
         online_link = None
         if location == 'online'.lower():
@@ -245,19 +246,19 @@ def bookings():
                 except ValueError:
                     click.echo('Invalid input. Please enter a number (e.g., 1, 2, 3, etc...).')
 
-    subject = click.prompt('Event subject: ')
-    date = click.prompt('Event date(DD/MM/YYYY): ')
-    start_time = click.prompt('Event start time (HH:MM): ')
-    end_time = click.prompt('Event end time (HH:MM): ')
-    location = click.prompt('Event Location (e.g: "Online" or a physical address): ')
+    subject = click.prompt('Event subject ')
+    date = click.prompt('Event date(DD/MM/YYYY) ')
+    start_time = click.prompt('Event start time (HH:MM) ')
+    end_time = click.prompt('Event end time (HH:MM) ')
+    location = click.prompt('Event Location (e.g: "Online" or a physical address) ')
 
     online_link = None
     if location == 'online'.lower():
         online_link = click.prompt("Enter the online meeting link: ")
 
     try:
-        start_hour = datetime.datetime.strptime(f'{date} {start_time}', "%d/%m/%Y %H:%M")
-        end_hour = datetime.datetime.strptime(f'{date} {end_time}', "%d/%m/%Y %H:%M")
+        start_hour = SAST.localize(datetime.datetime.strptime(f'{date} {start_time}', "%d/%m/%Y %H:%M"))
+        end_hour = SAST.localize(datetime.datetime.strptime(f'{date} {end_time}', "%d/%m/%Y %H:%M"))
     except ValueError:
         click.echo('Invalid date or time format. Please use DD/MM/YYYY and HH:MM.')
         return
