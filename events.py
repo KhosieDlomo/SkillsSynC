@@ -12,7 +12,7 @@ def view_booking():
     if not current_session['logged_in']:
         return
     
-    email = current_session['logged_in']
+    email = current_session['email']
     click.echo(f"Fetching bookings...")
 
     try:
@@ -26,13 +26,13 @@ def view_booking():
             data = booking.to_dict()
             click.echo(f"Subject: {data['subject']}, Date: {data['date']}, Time: {data['start_time']} - {data['end_time']}, Event ID: {data['google_event_id']}")
             booking_found = True
-            main_menu()
-        
+                    
         if not booking_found:
             click.echo("⚠ No bookings found for this email address.")
-            main_menu()
+        main_menu()
     except Exception as e:
         click.echo(f"Error fetching bookings: {e}")
+        main_menu()
 
 @click.command()
 def cancel_booking():
