@@ -70,3 +70,20 @@ def feedback(user_id, mentor_id, rates, comment):
     feedback_info = {'user_id': user_id, 'mentor_id': mentor_id, 'rating': rates, 'comment': comment, 'timestamp': datetime.utcnow()}
     feedback_val.set(feedback_info)
     click.echo('Feedback sumbitted successfully!')
+
+def registered_users(role = None):
+    '''Getting all existing users in the firebase.'''
+    try:
+        if role:
+            user_ref = db.collection('users').where(filter=firestore.FieldFilter('role', '==', role)).stream()
+        else:
+            user_ref = db.collection('users').stream()
+        
+        users = []
+        for user in user_ref:
+            user_data = user.to_dict()
+            users.append({'email': user_data.get('email'), 'role': user_data.get('role', 'peer'), 'expertise': user_data.get('expertise', 'N/A'), 'availability': user_data.get('availability', True)})
+        return users
+    except Exception as e:
+        click.echo(f"Error fetching users: {e}")
+        return []
