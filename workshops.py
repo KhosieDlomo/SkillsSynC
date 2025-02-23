@@ -155,13 +155,13 @@ def create_workshop():
         }
         db.collection('workshops').add(workshop_data)
         click.echo('Workshop created and all peers added successfully.')
-        main_menu()
+        
     except HttpError as error:
         click.echo(f"An error occured while creating event: {error}")
-        main_menu()
     except Exception as e:
         click.echo(f'Failed to create workshop: {e}')
-        main_menu()
+        
+    main_menu()
 
 if __name__ == '__main__':
     cli = click.CommandCollection(sources=[view_workshop, create_workshop, signup, signin])
