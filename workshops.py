@@ -16,12 +16,12 @@ def view_workshop():
         return
     
     try:
-        workshops = db.collection('workshops').where(filter=firestore.FieldFilter('date', '>=', datetime.datetime.now().isoformat())).stream()
+        workshops = db.collection('workshops').stream()
         all_workshop = []
         for workshop in workshops:
             data = workshop.to_dict()
             all_workshop.append(data)
-        
+                
         all_workshop.sort(key=lambda i: datetime.datetime.strptime(i['Date'], '%d/%m/%Y'))
         if not all_workshop:
             click.echo('No upcoming workshops found.')
@@ -30,7 +30,7 @@ def view_workshop():
         
         click.echo('Upcoming workshops')
         for workshop in all_workshop:
-            click.echo(f"Title: {workshop['Title']}, Date: {workshop['Date']}, Time: {workshop['start_time']} - {workshop['end_time']}, Mentors: {', '.join(workshop.get('mentors', []))}, Peers: {', '.join(workshop.get('peers',[]))}")
+            click.echo(f"Title: {workshop['Title']}, Date: {workshop['Date']}, Time: {workshop['start_time']} - {workshop['end_time']}, Mentors: {', '.join(workshop.get('mentors', []) if workshop.get('mentors') else [])}, Peers: {', '.join(workshop.get('peers',[])if workshop.get('peers') else [])}")
             main_menu()
     
     except Exception as e:

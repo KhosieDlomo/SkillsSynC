@@ -3,7 +3,69 @@ import click
 from firebase_auth import db, auth, require_auth, current_session
 from googleapiclient.errors import HttpError
 from availability import available_mentors, available_peers
+from google.cloud import firestore
 from calender import get_calendar
+
+def is_mentor_available(service, mentor_email, start_hour, end_hour):
+    """Checking if a mentor is available in their Google Calendar."""
+    time_min = start_hour.isoformat() + 'Z'
+    time_max = end_hour.isoformat() + 'Z'
+    try:
+        event_result = service.events().list(calendarId='primary', timeMin=time_min, timeMax=time_max, singleEvents=True).execute()
+        events = event_result.get('items', [])
+        return not events  
+    except HttpError as e:
+        print(f"An HTTP error occurred: {e}")
+        return False  
+
+def find_next_available_slot(service, mentor_email, start_date, duration_hours, max_days=7):
+    """Finds the next available time slot for a mentor."""
+    current_date = start_date
+    for day in range(max_days):
+        for hour in range(7, 18):
+            start_hour = current_date.replace(hour=hour, minute=0, second=0, microsecond=0)
+            end_hour = start_hour + datetime.timedelta(hours=duration_hours)
+
+            if start_hour.weekday() < 5:  
+                if is_mentor_available(service, mentor_email, start_hour, end_hour):
+                    return start_hour, end_hour 
+        current_date += datetime.timedelta(days=1)  
+    return None, None  
+
+def update_booking(db, google_event_id, new_start_hour, new_end_hour):
+    """Updates an existing booking in Firestore and Google Calendar."""
+    try:
+        meetings_ref = db.collection('meetings')
+        query = meetings_ref.where(filter=firestore.FieldFilter('google_event_id', '==', google_event_id)).limit(1) # Use limit to optimize
+
+        results = query.stream()
+
+        for meeting in results:
+            meeting_data = meeting.to_dict()
+            meeting_id = meeting.id
+            print(f"found meeting: {meeting_id}")
+
+        service = get_calendar()
+        if not service:
+            click.echo("Failed to initialize Google Calendar service.")
+            return
+
+        event = service.events().get(calendarId='primary', eventId=google_event_id).execute()
+        event['start']['dateTime'] = new_start_hour.isoformat()
+        event['end']['dateTime'] = new_end_hour.isoformat()
+
+        updated_event = service.events().update(calendarId='primary', eventId=google_event_id, body=event, sendUpdates='all').execute()
+
+        
+        db.collection('meetings').document(meeting_id).update({
+            'start_time': new_start_hour.isoformat(),
+            'end_time': new_end_hour.isoformat()
+        })
+
+        click.echo(f"Booking updated successfully: {updated_event.get('htmlLink')}")
+
+    except Exception as e:
+        click.echo(f"An error occurred while updating the booking: {e}")
 
 @click.command()
 def bookings():
@@ -11,6 +73,7 @@ def bookings():
 
     if not current_session['user_id']:
         return
+    
     user_id =current_session["user_id"]
     success, message = require_auth(user_id)
     if not success:
@@ -39,6 +102,7 @@ def bookings():
             click.echo("No mentors or peer found.")
             click.echo("Please try a different expertise or language, or check back later.")
             return
+        
         click.echo("\nAvailable Mentors and Peers for the Group session: ")
         for i, person in enumerate(combined_lst):
             click.echo(f"{i + 1}: {person['name']},({person['expertise']}, {person['language']}) - {person['email']}")
@@ -53,9 +117,12 @@ def bookings():
                 if 0 <= member_number < len(combined_lst):
                     selected_members.append(combined_lst[member_number])
                     click.echo(f"Added {combined_lst[member_number]['name']} to the group.")
-            
+                else:
+                    click.echo("Invalid selection. Please try again.")
+
             except ValueError:
                 click.echo("Invalid input. Please enter a number or 'done'.")
+
         if not selected_members:
             click.echo("No members selected for group session.")
             return
@@ -75,6 +142,7 @@ def bookings():
         except ValueError:
             click.echo("Invalid date or time format. Please use DD/MM/YYYY and HH:MM.")
             return
+        
         if start_hour.weekday() >= 5 or start_hour.hour < 7 or end_hour.hour > 17:
             click.echo("Error! Meetings are only allowed on weekdays between 07:00 to 17:00.")
             return
@@ -154,7 +222,7 @@ def bookings():
                 click.echo("Please try a group session or check back later.")
                 return
             for i, peer in enumerate(peers):
-                click.echo(f"{i + 1}: Name: {peer['name']}, Email: {peer['email']}, Expertise: {peer['expertise']}")
+                click.echo(f"{i + 1}: Name: {peer['name']}, Email: {peer['email']}, Expertise: {peer['expertise']}, Available:{peer['available_dats']}, Time:{peer['available_time_start']}-{peer['available_time_end']}")
             
             while True:
                 try:
@@ -168,9 +236,9 @@ def bookings():
             chosen_person = peers[select_peer]
 
         
-    service = get_calendar()
-    if not service:
-        return
+    # service = get_calendar()
+    # if not service:
+    #     return
 
     subject = click.prompt('Event subject: ')
     date = click.prompt('Event date(DD/MM/YYYY): ')
