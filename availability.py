@@ -5,7 +5,7 @@ from google.cloud import firestore
 from utils import handle_no_mentors_or_peers
 import pytz
 
-SAST =pytz.timezone('African/Johannesburg')
+SAST =pytz.timezone('Africa/Johannesburg')
 
 def get_all_users(role=None, expertise=None, language=None, available=True):
     try:
