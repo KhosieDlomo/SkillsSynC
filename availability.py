@@ -3,6 +3,9 @@ import click
 from datetime import datetime,timedelta
 from google.cloud import firestore
 from utils import handle_no_mentors_or_peers
+import pytz
+
+SAST =pytz.timezone('African/Johannesburg')
 
 def get_all_users(role=None, expertise=None, language=None, available=True):
     try:
@@ -31,7 +34,7 @@ def calculate_availability(user_data):
             'available_time_end': '23:59'
         }
 
-    today = datetime.now()
+    today = datetime.now(SAST)
     unavailable_for_first_4_days = True
     for day in range(4):
         check_date = today + timedelta(days=day)
@@ -99,7 +102,7 @@ def feedback(user_id, mentor_id, rates, comment):
     '''Function for sending Feedback about the experience.'''
     try:
         feedback_val = db.collection('feedback').document()
-        feedback_info = {'user_id': user_id, 'mentor_id': mentor_id, 'rating': rates, 'comment': comment, 'timestamp': datetime.utcnow()}
+        feedback_info = {'user_id': user_id, 'mentor_id': mentor_id, 'rating': rates, 'comment': comment, 'timestamp': datetime.now(SAST)}
         feedback_val.set(feedback_info)
         click.echo('Feedback sumbitted successfully!')
     except Exception as e:
