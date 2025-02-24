@@ -117,6 +117,7 @@ def book_session(service, subject, start_hour, end_hour, location, attendees, on
 @click.command()
 def bookings():
     '''Book a meeting with your peers or mentors.'''
+    from main import main_menu
 
     if not current_session['user_id']:
         return
@@ -142,7 +143,7 @@ def bookings():
         combined_lst = mentors + peers
         if not combined_lst:
             click.echo("No mentors or peer found.")
-            click.echo("Please try a different expertise or language, or check back later.")
+            main_menu()
             return
         
         click.echo("\nAvailable Mentors and Peers for the Group session: ")
@@ -167,6 +168,7 @@ def bookings():
 
         if not selected_members:
             click.echo("No members selected for group session.")
+            main_menu()
             return
         
         subject = click.prompt('Event subject ')
@@ -183,10 +185,12 @@ def bookings():
             end_hour = datetime.datetime.strptime(f"{date} {end_time}", "%d/%m/%Y %H:%M")
         except ValueError:
             click.echo("Invalid date or time format. Please use DD/MM/YYYY and HH:MM.")
+            main_menu()
             return
         
         if start_hour.weekday() >= 5 or start_hour.hour < 7 or end_hour.hour > 17:
             click.echo("Error! Meetings are only allowed on weekdays between 07:00 to 17:00.")
+            main_menu()
             return
         
         attendees =[person['email'] for person in selected_members]
@@ -194,9 +198,11 @@ def bookings():
 
         service = get_calendar()
         if not service:
+            main_menu()
             return
         
         book_session(service, subject, start_hour, end_hour, location, attendees, online_link)
+        main_menu()
         return
     
     else:
@@ -213,8 +219,9 @@ def bookings():
             click.echo('\nFecthing available mentors...')
             if not mentors:
                 click.echo('No available mentors')
-                click.echo("Please try a group session or check back later.")
+                main_menu()
                 return
+            
             for i, mentor in enumerate(mentors):
                 click.echo(f"{i + 1}: Name: {mentor['name']}, Email:{mentor['email']}, Expertise: {mentor['expertise']}")
 
@@ -233,7 +240,7 @@ def bookings():
             click.echo('\nFetching available peers...')
             if not peers:
                 click.echo('No Available peers at the moment.')
-                click.echo("Please try a group session or check back later.")
+                main_menu()
                 return
             for i, peer in enumerate(peers):
                 click.echo(f"{i + 1}: Name: {peer['name']}, Email: {peer['email']}, Expertise: {peer['expertise']}, Available:{peer['available_dats']}, Time:{peer['available_time_start']}-{peer['available_time_end']}")
@@ -251,6 +258,7 @@ def bookings():
 
     if chosen_person is None:
             click.echo("Error: No mentor or peer selected.")
+            main_menu()
             return
     
     subject = click.prompt('Event subject ')
@@ -268,13 +276,17 @@ def bookings():
         end_hour = SAST.localize(datetime.datetime.strptime(f'{date} {end_time}', "%d/%m/%Y %H:%M"))
     except ValueError:
         click.echo('Invalid date or time format. Please use DD/MM/YYYY and HH:MM.')
+        main_menu()
         return
 
     if start_hour.weekday() >= 5 or start_hour.hour < 7 or end_hour.hour > 17:
         click.echo("Error! Meetings are only allowed on weekdays between 07:00 to 17:00.")
+        main_menu()
         return
+    
     service = get_calendar()
     if not service:
+        main_menu()
         return
 
     if not is_mentor_available(service, chosen_person['email'], start_hour, end_hour):
@@ -286,11 +298,14 @@ def bookings():
                 if reschedule == 'y':
                     start_hour, end_hour = new_start_hour, new_end_hour
                 else:
+                    main_menu()
                     return
             else:
                 click.echo("No available slots found.")
+                main_menu()
                 return
 
     attendees = [chosen_person['email']]
     book_session(service, subject, start_hour, end_hour, location, attendees, online_link)
+    main_menu()
     return
