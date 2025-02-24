@@ -197,6 +197,7 @@ def bookings():
             return
         
         book_session(service, subject, start_hour, end_hour, location, attendees, online_link)
+        return
     
     else:
         click.echo('\nFetching available mentors and peers...')
@@ -205,6 +206,9 @@ def bookings():
 
         user_choice = click.prompt("Book with a (M)-for-Mentor or (P)-for-Peer?", type=click.Choice(['M','P','m','p'])).lower()
         booking_mentor = user_choice == 'm'
+
+        chosen_person = None
+
         if booking_mentor:
             click.echo('\nFecthing available mentors...')
             if not mentors:
@@ -245,6 +249,10 @@ def bookings():
                 except ValueError:
                     click.echo('Invalid input. Please enter a number (e.g., 1, 2, 3, etc...).')
 
+    if chosen_person is None:
+            click.echo("Error: No mentor or peer selected.")
+            return
+    
     subject = click.prompt('Event subject ')
     date = click.prompt('Event date(DD/MM/YYYY) ')
     start_time = click.prompt('Event start time (HH:MM) ')
@@ -285,3 +293,4 @@ def bookings():
 
     attendees = [chosen_person['email']]
     book_session(service, subject, start_hour, end_hour, location, attendees, online_link)
+    return
