@@ -189,8 +189,6 @@ def bookings():
             click.echo("Error! Meetings are only allowed on weekdays between 07:00 to 17:00.")
             return
         
-        time_min = start_hour.isoformat() + 'Z'
-        time_max = end_hour.isoformat() + 'Z'
         attendees =[person['email'] for person in selected_members]
         attendees.append(auth.current_user['email'])
 
@@ -220,12 +218,12 @@ def bookings():
                 try:
                     select_mentor = int(click.prompt('Select the Mentor(e.g., 1, 2, 3,etc).')) - 1
                     if 0 <= select_mentor < len(mentors):
+                        chosen_person = mentors[select_mentor]
                         break
                     else:
                         click.echo('Invalid selection!')
                 except ValueError:
                         click.echo('Invalid input. Please enter a number(e.g., 1, 2, 3, etc...)')
-            chosen_person = mentors[select_mentor]
 
         else:
             click.echo('\nFetching available peers...')
