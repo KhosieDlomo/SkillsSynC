@@ -60,7 +60,7 @@ def view_booking():
             click.echo(f"📌 {location}")
             click.echo(f"📝 Subject: {subject}")
             click.echo(f"👤 Organizer: {organizer}")
-            click.echo(f"👥 Attendees: {', '.join(attendees)}")
+            click.echo(f"👥 Attendees: {', '.join(set(attendees))}")
             click.echo(f"🔍 Status: {status}")
             click.echo(f"🔗 Event ID: {google_event_id}")
             click.echo("-" * 40)  
@@ -77,7 +77,6 @@ def cancel_booking():
     from main import main_menu
 
     if not current_session['logged_in']:
-        click.echo("Please sign up or sign in to use this feature")
         return
     
     email = current_session['email']

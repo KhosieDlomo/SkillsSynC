@@ -2,7 +2,7 @@ import click
 from login import signin, signup, reset_password, signout, current_session
 from events import view_booking, cancel_booking
 from book_meetings import bookings
-from workshops import view_workshop, create_workshop
+from workshops import view_workshop, create_workshop,cancel_workshop
 import firebase_admin
 
 def main_menu():
@@ -15,12 +15,12 @@ def main_menu():
                 click.echo("1. Book a Meeting")
                 click.echo("2. view Bookings")
                 click.echo("3. Cancel Booking")
-                click.echo("4. View Workshops")
-                
                 if current_session['role'] == 'mentor':
-                    click.echo("5. Create Workshop")
-                click.echo("6. Signout")
-                click.echo("7. Exit")
+                    click.echo("4. Create Workshop")
+                click.echo("5. View Workshops")
+                click.echo("6. Cancel Workshops")
+                click.echo("7. Signout")
+                click.echo("8. Exit")
                 
                 choice = click.prompt("Enter your choice", type=int)
 
@@ -30,14 +30,16 @@ def main_menu():
                     view_booking()
                 elif choice == 3:
                     cancel_booking()
-                elif choice == 4:
-                    view_workshop()
-                elif choice == 5 and current_session['role'] == 'mentor':
+                elif choice == 4 and current_session['role'] == 'mentor':
                     create_workshop()
+                elif choice == 5:
+                    view_workshop()
                 elif choice == 6:
+                    cancel_workshop()
+                elif choice == 7:
                     signout()
                     break  
-                elif choice == 7:
+                elif choice == 8:
                     try:
                         firebase_admin.delete_app(firebase_admin.get_app())
                     except ValueError:

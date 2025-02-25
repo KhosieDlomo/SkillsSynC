@@ -1,5 +1,5 @@
 import click
-from workshops import view_workshop, create_workshop
+from workshops import view_workshop, create_workshop,cancel_workshop
 from login import current_session
 
 def handle_no_mentors_or_peers():
@@ -11,8 +11,10 @@ def handle_no_mentors_or_peers():
     click.echo("2. View upcoming workshops")
     click.echo("3. Cancel booking")
     if current_session['role'] == 'mentor':
-        click.echo("4. Create workshops")
-    click.echo("5. Return to the main menu.")
+        click.echo("4. Cancel workshop")
+    if current_session['role'] == 'mentor':
+        click.echo("5. Create workshops")
+    click.echo("6. Return to the main menu.")
     
     choice = click.prompt("Enter your choice", type=int)
     
@@ -25,8 +27,10 @@ def handle_no_mentors_or_peers():
         from events import cancel_booking
         cancel_booking()
     elif choice == 4 and current_session['role'] == 'mentor':
+        cancel_workshop()
+    elif choice == 5 and current_session['role'] == 'mentor':
         create_workshop()
-    elif choice == 5:
+    elif choice == 6:
         from main import main_menu
         main_menu()
     else:
