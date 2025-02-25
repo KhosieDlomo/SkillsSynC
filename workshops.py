@@ -28,10 +28,31 @@ def view_workshop():
             main_menu()
             return
         
-        click.echo('Upcoming workshops')
+        click.echo('---Upcoming workshops---')
         for workshop in all_workshop:
-            click.echo(f"Title: {workshop['Title']}, Date: {workshop['Date']}, Time: {workshop['start_time']} - {workshop['end_time']}, Mentors: {', '.join(workshop.get('mentors', []) if workshop.get('mentors') else [])}, Peers: {', '.join(workshop.get('peers',[])if workshop.get('peers') else [])}")
-            main_menu()
+            try:
+                start_time = datetime.datetime.fromisoformat(workshop['start_time'])
+                end_time = datetime.datetime.fromisoformat(workshop['end_time'])
+                formatted_date = start_time.strftime('%A, %d %B %Y')
+                formatted_start_time = start_time.strftime('%I:%M %p')
+                formatted_end_time = end_time.strftime('%I:%M %p')
+
+            except ValueError:
+                formatted_date = workshop['Date']
+                formatted_start_time = workshop['start_time']
+                formatted_end_time = workshop['end_time']
+
+            click.echo(f"\n📅 {formatted_date}")
+            click.echo(f"🕒 {formatted_start_time} - {formatted_end_time}")
+            click.echo(f"📌 Location: {workshop['location']}")
+            click.echo(f"📝 Title: {workshop['Title']}")
+            click.echo(f"👤 Mentors: {', '.join(workshop.get('mentors', []))}")
+            click.echo(f"👥 Peers: {', '.join(workshop.get('peers', []))}")
+            if workshop.get('online_link'):
+                click.echo(f"🔗 Online Link: {workshop['online_link']}")
+            click.echo("-" * 40)  
+        
+        main_menu()
     
     except Exception as e:
         click.echo(f'Error while fetching upcoming workshops: {e}')
