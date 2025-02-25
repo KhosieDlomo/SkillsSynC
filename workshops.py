@@ -46,11 +46,11 @@ def view_workshop():
             click.echo(f"🕒 {formatted_start_time} - {formatted_end_time}")
             click.echo(f"📌 Location: {workshop['location']}")
             click.echo(f"📝 Title: {workshop['Title']}")
-            click.echo(f"👤 Mentors: {', '.join(workshop.get('mentors', []))}")
-            click.echo(f"👥 Peers: {', '.join(workshop.get('peers', []))}")
+            click.echo(f"👤 Mentors: {', '.join(set(workshop.get('mentors', [])))}")
+            click.echo(f"👥 Peers: {', '.join(set(workshop.get('peers', [])))}")
             if workshop.get('online_link'):
                 click.echo(f"🔗 Online Link: {workshop['online_link']}")
-            click.echo("-" * 40)  
+            click.echo("-" * 100)  
         
         main_menu()
     
@@ -136,17 +136,25 @@ def create_workshop():
         return
     
     peers = db.collection('users').where(filter=firestore.FieldFilter('role', '==', 'peer')).stream()
-    peers_email = []
+    peers_email = set()
     for peer in peers:
         if peer.exists:
             peer_email = peer.to_dict().get('email')
             if peer_email:
-                peers_email.append(peer_email)
+                peers_email.add(peer_email.strip())
+
+    mentors = db.collection('users').where(filter=firestore.FieldFilter('role', '==', 'mentor')).stream()
+    mentors_email = set()  
+    for mentor in mentors:
+        if mentor.exists:
+            mentor_email = mentor.to_dict().get('email')
+            if mentor_email:
+                mentors_email.add(mentor_email.strip())
 
     if user_email:
-        peers_email.append(user_email)
+        peers_email.add(user_email)
 
-    attendees = [{'email': email.strip()} for email in peers_email]
+    attendees = [{'email': email.strip()} for email in mentors_email.union(peers_email)]
     
     event = {'title': title,
              'description': description,
@@ -172,8 +180,8 @@ def create_workshop():
             'start_time': start_hour.isoformat(),
             'end_time': end_hour.isoformat(),
             'location': location,
-            'mentors': [user_email],
-            'peers': peers_email,
+            'mentors': list(user_email),
+            'peers': list(peers_email),
             'google_event_id': event_result.get('id'),
             'online_link': online_link
         }
