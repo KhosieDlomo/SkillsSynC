@@ -56,14 +56,14 @@ def view_booking():
                 formatted_date = date
 
             click.echo(f"\n📅 {formatted_date}")
+            click.echo(f"📝 Subject: {subject}")
             click.echo(f"🕒 {formatted_start_time} - {formatted_end_time}")
             click.echo(f"📌 {location}")
-            click.echo(f"📝 Subject: {subject}")
             click.echo(f"👤 Organizer: {organizer}")
             click.echo(f"👥 Attendees: {', '.join(set(attendees))}")
             click.echo(f"🔍 Status: {status}")
             click.echo(f"🔗 Event ID: {google_event_id}")
-            click.echo("-" * 40)  
+            click.echo("-" * 100)  
             
         main_menu()
                     
