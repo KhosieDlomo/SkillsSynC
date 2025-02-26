@@ -24,11 +24,11 @@ def view_workshop():
                 
         all_workshop.sort(key=lambda i: datetime.datetime.strptime(i['Date'], '%d/%m/%Y'))
         if not all_workshop:
-            click.echo('No upcoming workshops found.')
+            click.echo('⚠️ No upcoming workshops found.')
             main_menu()
             return
         
-        click.echo('---Upcoming workshops---')
+        click.echo('📩 ---Upcoming workshops---')
         for num, workshop in enumerate(all_workshop):
             try:
                 title = workshop.get('Title', 'Untitled Workshop')
@@ -53,7 +53,7 @@ def view_workshop():
                     formatted_start_time = start_time
                     formatted_end_time = end_time
 
-                click.echo(f"\n📅 Workshop {num + 1}")
+                click.echo(f"\n📋 Workshop {num + 1}")
                 click.echo(f"├─ 📝 Title: {title}")
                 click.echo(f"├─ 🗓️ Date: {formatted_date}")
                 click.echo(f"├─ 🕒 Time: {formatted_start_time} - {formatted_end_time}")
@@ -67,12 +67,12 @@ def view_workshop():
                 click.echo("-" * 100)  
             
             except Exception as e:
-                click.echo(f"Error displaying workshop {num + 1}: {e}")
+                click.echo(f"⚠️ Error displaying workshop {num + 1}: {e}")
                 continue
             main_menu()
     
     except Exception as e:
-        click.echo(f'Error while fetching upcoming workshops: {e}')
+        click.echo(f'⚠️ Error while fetching upcoming workshops: {e}')
         main_menu()
 
 @click.command()
@@ -87,7 +87,7 @@ def create_workshop():
     user_email = current_session.get('email')
 
     if not user_id or not user_email:
-        click.echo("User not authenticated. Please sign in.")
+        click.echo("⚠️  User not authenticated. Please sign in.")
         main_menu()
         return
 
@@ -98,13 +98,13 @@ def create_workshop():
         role = 'peer'
         
     if role != 'mentor':
-        click.echo("Only mentors can create workshops")
+        click.echo("⚠️Only mentors can create workshops")
         main_menu()
         return
     
     service = get_calendar()
     if not service:
-        click.echo("Failed to initialize Google Calendar service.")
+        click.echo("⚠️ Failed to initialize Google Calendar service.")
         main_menu()
         return
 
@@ -124,12 +124,12 @@ def create_workshop():
         end_hour = datetime.datetime.strptime(f'{date} {end_time}', '%d/%m/%Y %H:%M')
 
     except ValueError:
-        click.echo('Invalid date or time format, please use DD/MM/YYYY HH:MM')
+        click.echo('⚠️ Invalid date or time format, please use DD/MM/YYYY HH:MM')
         main_menu()
         return
     
     if start_hour.weekday() >= 5 or start_hour.hour < 7 or end_hour.hour > 17:
-        click.echo("Error! Meetings are only allowed on weekdays between 07:00 to 17:00.")
+        click.echo("⚠️ Error! Meetings are only allowed on weekdays between 07:00 to 17:00.")
         main_menu()
         return
     
@@ -140,15 +140,15 @@ def create_workshop():
         events = event_result.get('items', [])
         
         if events:
-            click.echo("Conflicting events found during the specified time.")
+            click.echo("⚠️ Conflicting events found during the specified time.")
             for event in events:
                 click.echo(f"Event: {event.get('summary')}, Start: {event.get('start')}, End: {event.get('end')}")
-            click.echo("Please select a different time.")
+            click.echo("⚠️ Please select a different time.")
             main_menu()
             return
         
     except HttpError as e:
-        click.echo(f'Error while fetching Events from the calender {e}')
+        click.echo(f'⚠️ Error while fetching Events from the calender {e}')
         main_menu()
         return
     
@@ -203,12 +203,12 @@ def create_workshop():
             'online_link': online_link
         }
         db.collection('workshops').add(workshop_data)
-        click.echo('Workshop created and all peers added successfully.')
+        click.echo('✅ Workshop created and all peers added successfully.')
         
     except HttpError as error:
-        click.echo(f"An error occured while creating event: {error}")
+        click.echo(f"⚠️ An error occured while creating event: {error}")
     except Exception as e:
-        click.echo(f'Failed to create workshop: {e}')
+        click.echo(f'⚠️ Failed to create workshop: {e}')
         
     main_menu()
 
@@ -223,7 +223,7 @@ def cancel_workshop():
     user_email = current_session.get('email')
 
     if not user_id or not user_email:
-        click.echo("User not authenticated. Please sign in.")
+        click.echo("❌ User not authenticated. Please sign in.")
         main_menu()
         return
     
@@ -234,7 +234,7 @@ def cancel_workshop():
         role = 'peer'
         
     if role != 'mentor':
-        click.echo("Only mentors can cancel workshops.")
+        click.echo("⚠️ Only mentors can cancel workshops.")
         main_menu()
         return
 
@@ -245,14 +245,12 @@ def cancel_workshop():
         workshops = list(workshop_ref)
 
         if not workshops:
-            click.echo("No workshops found.")
+            click.echo("⚠️ No workshops found.")
             main_menu()
             return
         
         click.echo('\n--- Upcoming Workshops: ---')
         for num, workshop in enumerate(workshops):
-            data = workshop.to_dict()
-
             try:
                 title = workshop.get('Title', 'Untitled Workshop')
                 date = workshop.get('Date', 'Unknown Date')
@@ -276,21 +274,21 @@ def cancel_workshop():
                     formatted_start_time = start_time
                     formatted_end_time = end_time
 
-                click.echo(f"\n📅 Workshop {num + 1}")
+                click.echo(f"\n📋 Workshop {num + 1}")
                 click.echo(f"├─ 📝 Title: {title}")
                 click.echo(f"├─ 🗓️ Date: {formatted_date}")
                 click.echo(f"├─ 🕒 Time: {formatted_start_time} - {formatted_end_time}")
                 click.echo(f"├─ 📍 Location: {location}")
                 click.echo(f"├─ 👤 Mentors: {', '.join(set(mentors))}")
                 click.echo(f"├─ 👥 Peers: {', '.join(set(peers))}")
-                if data.get('online_link'):
-                    click.echo(f"└─ 🔗 Online Link: {data['online_link']}")
+                if online_link:
+                    click.echo(f"└─ 🔗 Online Link: {online_link}")
                 else:
                     click.echo("└─ 🔗 Online Link: Not provided")
                 click.echo("-" * 100)
 
             except Exception as e:
-                click.echo(f"Error displaying workshop {num + 1}: {e}")
+                click.echo(f"⚠️ Error displaying workshop {num + 1}: {e}")
                 continue
             
         while True:
@@ -299,13 +297,13 @@ def cancel_workshop():
                 if 0 <= choice <= len(workshops):
                     break
                 else:
-                    click.echo("Invalid choice. Please enter a number within the range.")
+                    click.echo("⚠️ Invalid choice. Please enter a number within the range.")
             
             except ValueError:
-                click.echo("Invalid input. Please enter a number.")
+                click.echo("⚠️ Invalid input. Please enter a number.")
 
         if choice == 0:
-            click.echo("Cancel operation aborted.")
+            click.echo("❌ Cancel operation aborted.")
             main_menu()
             return
         
@@ -315,21 +313,21 @@ def cancel_workshop():
 
         service = get_calendar()
         if not service:
-            click.echo("Failed to initialize Google Calendar service.")
+            click.echo("⚠️ Failed to initialize Google Calendar service.")
             main_menu()
             return
 
         try:
             service.events().delete(calendarId='primary', eventId=event_id).execute()
         except HttpError as e:
-            click.echo(f"Error while deleting Google Calendar event: {e}")
+            click.echo(f"⚠️Error while deleting Google Calendar event: {e}")
             main_menu()
             return
 
         try:
             db.collection('workshops').document(selected_workshop.id).delete()
         except Exception as e:
-            click.echo(f"Error while deleting workshop from Firestore: {e}")
+            click.echo(f"⚠️ Error while deleting workshop from Firestore: {e}")
             main_menu()
             return
         
@@ -338,7 +336,7 @@ def cancel_workshop():
         click.echo(f"📩 Notification sent to: {', '.join(set(attendees))}")
 
     except Exception as e:
-        click.echo(f"Error canceling workshop: {e}")
+        click.echo(f"⚠️ Error canceling workshop: {e}")
     main_menu() 
 
 if __name__ == '__main__':

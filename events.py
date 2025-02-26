@@ -13,7 +13,7 @@ def view_booking():
         return
     
     email = current_session['email']
-    click.echo(f"Fetching bookings for {email}")
+    click.echo(f"📩 Fetching bookings for {email}")
 
     try:
         requested_bookings_ref = db.collection('meetings').where(filter=firestore.FieldFilter('organizer', '==', email))
@@ -26,12 +26,12 @@ def view_booking():
         unique_bookings = {booking.id: booking for booking in all_bookings}.values()
 
         if not unique_bookings:
-            click.echo("⚠ No bookings found for this email address.")
+            click.echo("⚠️ No bookings found for this email address.")
             main_menu()
             return
 
         click.echo(f'\n Your Bookings...')
-        for booking in bookings:
+        for num, booking in enumerate(bookings, start=1):
             data = booking.to_dict()
             subject = data.get('subject', 'No Subject')
             date = data.get('date', 'Unknown Date')
@@ -50,25 +50,27 @@ def view_booking():
                 formatted_start_time = start_time_obj.strftime('%I:%M %p')
                 formatted_end_time = end_time_obj.strftime('%I:%M %p')
                 formatted_date = start_time_obj.strftime('%A, %d %B %Y')
+
             except ValueError:
                 formatted_start_time = start_time
                 formatted_end_time = end_time
                 formatted_date = date
 
-            click.echo(f"\n📅 {formatted_date}")
+            click.echo(f"\n📋 Booking: {num}")
             click.echo(f"📝 Subject: {subject}")
-            click.echo(f"🕒 {formatted_start_time} - {formatted_end_time}")
-            click.echo(f"📌 {location}")
+            click.echo(f"📅 Date: {formatted_date}")
+            click.echo(f"🕒 Time: {formatted_start_time} - {formatted_end_time}")
+            click.echo(f"📌 Location: {location}")
             click.echo(f"👤 Organizer: {organizer}")
             click.echo(f"👥 Attendees: {', '.join(set(attendees))}")
             click.echo(f"🔍 Status: {status}")
             click.echo(f"🔗 Event ID: {google_event_id}")
-            click.echo("-" * 100)  
+            click.echo("-" * 80)  
             
         main_menu()
                     
     except Exception as e:
-        click.echo(f"Error fetching bookings: {e}")
+        click.echo(f"⚠️ Error fetching bookings: {e}")
         main_menu()
 
 @click.command()
@@ -87,25 +89,58 @@ def cancel_booking():
         bookings = list(booking_ref.stream())
 
         if not bookings:
-            click.echo("No bookings found.")
+            click.echo("⚠️ No bookings found.")
             main_menu()
             return
         click.echo("Your Bookings:")
         for num, booking in enumerate(bookings):
             data = booking.to_dict()
-            click.echo(f"{num + 1}. Subject: {data['subject']}, Date: {data['date']}, Time: {data['start_time']} - {data['end_time']}, Event ID: {data['google_event_id']}")
+            subject = data.get('subject', 'No Subject')
+            date = data.get('date', 'Unknown Date')
+            start_time = data.get('start_time', 'Unknown Start Time')
+            end_time = data.get('end_time', 'Unknown End Time')
+            organizer = data.get('organizer', 'Unknown Organizer')
+            attendees = data.get('attendees', [])
+            status = data.get('status', 'pending')
+            location = data.get('location', 'Unknown Location')
+            google_event_id = data.get('google_event_id', 'No Event ID')
+            
+            try:
+                from datetime import datetime
+                start_time_obj = datetime.fromisoformat(start_time)
+                end_time_obj = datetime.fromisoformat(end_time)
+                formatted_start_time = start_time_obj.strftime('%I:%M %p')
+                formatted_end_time = end_time_obj.strftime('%I:%M %p')
+                formatted_date = start_time_obj.strftime('%A, %d %B %Y')
+                
+            except ValueError:
+                formatted_start_time = start_time
+                formatted_end_time = end_time
+                formatted_date = date
+
+            click.echo(f"\n📋 Booking {num}")
+            click.echo(f"📝 Subject: {subject}")
+            click.echo(f"📅 Date: {formatted_date}")
+            click.echo(f"🕒 Time: {formatted_start_time} - {formatted_end_time}")
+            click.echo(f"📌 Location: {location}")
+            click.echo(f"👤 Organizer: {organizer}")
+            click.echo(f"👥 Attendees: {', '.join(set(attendees))}")
+            click.echo(f"🔍 Status: {status}")
+            click.echo(f"🔗 Event ID: {google_event_id}")
+            click.echo("-" * 80)
+
             while True:
                 try:
                     choice = int(click.prompt(f"Enter the number of the booking to cancel (1 - {len(bookings)}), or 0 to cancel: "))
                     if 0 <= choice <= len(bookings):
                         break
                     else:
-                        click.echo("Invalid choice. Please enter a number within the range.")
+                        click.echo("⚠️ Invalid choice. Please enter a number within the range.")
                 except ValueError:
-                    click.echo("Invalid input. Please enter a number.")
+                    click.echo("⚠️ Invalid input. Please enter a number.")
 
             if choice == 0:
-                click.echo("Cancel operation aborted.")
+                click.echo("❌ Cancel operation aborted.")
                 main_menu()
                 return
             
@@ -120,19 +155,19 @@ def cancel_booking():
             try:
                 service.events().delete(calendarId='primary', eventId=event_id).execute()
             except Exception as e:
-                click.echo(f"Error while deleting event: {e}")
+                click.echo(f"⚠️ Error while deleting event: {e}")
                 main_menu()
                 return
             try:
                 db.collection('meetings').document(selected_booking.id).delete()
             except Exception as e:
-                click.echo(f"Error while deleting from Firestore: {e}")
+                click.echo(f"⚠️ Error while deleting from Firestore: {e}")
                 main_menu()
                 return
-            click.echo("Booking successfully canceled.")
+            click.echo("✅ Booking successfully canceled.")
     
     except Exception as e:
-        click.echo(f"Error canceling booking: {e}")
+        click.echo(f"⚠️ Error canceling booking: {e}")
         main_menu()
 
 if __name__ == '__main__':
