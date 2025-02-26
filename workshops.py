@@ -40,6 +40,12 @@ def view_workshop():
                 peers = workshop.get('peers', [])
                 online_link = workshop.get('online_link', '')
 
+                if isinstance(mentors, str):
+                    mentors = [mentor.strip() for mentor in mentors.split(',')]
+
+                if isinstance(peers, str):
+                    peers = [peer.strip() for peer in peers.split(',')]
+
                 try:
 
                     start_time = datetime.datetime.fromisoformat(start_time)
@@ -64,7 +70,7 @@ def view_workshop():
                     click.echo(f"└─ 🔗 Online Link: {online_link}")
                 else:
                     click.echo("└─ 🔗 Online Link: Not provided")
-                click.echo("-" * 100)  
+                click.echo("-" * 80)  
             
             except Exception as e:
                 click.echo(f"⚠️ Error displaying workshop {num + 1}: {e}")
@@ -241,7 +247,7 @@ def cancel_workshop():
     click.echo(f"Fetching all workshops...")
 
     try:
-        workshop_ref = db.collection('workshops').stream()
+        workshop_ref = db.collection('workshops').where(filter=firestore.FieldFilter('mentors','array_contains', user_email)).stream()
         workshops = list(workshop_ref)
 
         if not workshops:
@@ -260,7 +266,7 @@ def cancel_workshop():
                 mentors = workshop.get('mentors', [])
                 peers = workshop.get('peers', [])
                 online_link = workshop.get('online_link', '')
-
+                    
                 try:
 
                     start_time = datetime.datetime.fromisoformat(start_time)
@@ -319,6 +325,7 @@ def cancel_workshop():
 
         try:
             service.events().delete(calendarId='primary', eventId=event_id).execute()
+            click.echo("✅ Google Calendar event deleted.")
         except HttpError as e:
             click.echo(f"⚠️Error while deleting Google Calendar event: {e}")
             main_menu()
@@ -326,13 +333,14 @@ def cancel_workshop():
 
         try:
             db.collection('workshops').document(selected_workshop.id).delete()
+            click.echo("✅ Workshop deleted from Firestore.")
         except Exception as e:
             click.echo(f"⚠️ Error while deleting workshop from Firestore: {e}")
             main_menu()
             return
         
         attendees = workshop_data.get('mentors', []) + workshop_data.get('peers', [])
-        click.echo(f"Workshop '{workshop_data['Title']}' has been canceled.")
+        click.echo(f"✅ Workshop '{workshop_data['Title']}' has been canceled.")
         click.echo(f"📩 Notification sent to: {', '.join(set(attendees))}")
 
     except Exception as e:
