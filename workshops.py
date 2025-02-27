@@ -166,6 +166,7 @@ def create_workshop():
             if peer_email:
                 peers_email.add(peer_email.strip())
 
+    
     mentors = db.collection('users').where(filter=firestore.FieldFilter('role', '==', 'mentor')).stream()
     mentors_email = set()  
     for mentor in mentors:
@@ -176,8 +177,18 @@ def create_workshop():
 
     if user_email:
         peers_email.add(user_email)
+    
+    attendees = []
+    #Mentors
+    for emails in mentors_email:
+        if emails != user_email:
+            attendees.append({'email': emails.strip(), 'optional': True})
 
-    attendees = [{'email': email.strip()} for email in mentors_email.union(peers_email)]
+    #peers
+    for email in peers_email:
+        attendees.append({'email': email.strip(), 'optional': False})
+
+    # attendees = [{'email': email.strip()} for email in mentors_email.union(peers_email)]
     
     event = {'title': title,
              'description': description,
@@ -185,6 +196,7 @@ def create_workshop():
              'start': {'dateTime': start_hour.isoformat(), 'timeZone': 'UTC'},
              'end': {'dateTime': end_hour.isoformat(), 'timeZone': 'UTC'},
              'attendees': attendees,
+             'organizer': {'email': user_email},
              'reminders': {'useDefault': False,
                       'overrides': [{'method': 'email', 'minutes': 24 * 60},
                                      {'method': 'popup', 'minutes': 15},
@@ -206,7 +218,8 @@ def create_workshop():
             'mentors': list(user_email),
             'peers': list(peers_email),
             'google_event_id': event_result.get('id'),
-            'online_link': online_link
+            'online_link': online_link,
+            'organizer' : user_email
         }
         db.collection('workshops').add(workshop_data)
         click.echo('✅ Workshop created and all peers added successfully.')
