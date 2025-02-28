@@ -22,11 +22,12 @@ def view_workshop():
             data = workshop.to_dict()
             all_workshop.append(data)
                 
-        all_workshop.sort(key=lambda i: datetime.datetime.strptime(i['Date'], '%d/%m/%Y'))
         if not all_workshop:
             click.echo('⚠️ No upcoming workshops found.')
             main_menu()
             return
+        
+        all_workshop.sort(key=lambda i: datetime.datetime.strptime(i['Date'], '%d/%m/%Y'))
         
         click.echo('📩 ---Upcoming workshops---')
         for num, workshop in enumerate(all_workshop):
@@ -41,10 +42,10 @@ def view_workshop():
                 online_link = workshop.get('online_link', '')
 
                 if isinstance(mentors, str):
-                    mentors = [mentor.strip() for mentor in mentors.split(',')]
+                    mentors = mentors.split(',')
 
                 if isinstance(peers, str):
-                    peers = [peer.strip() for peer in peers.split(',')]
+                    peers = peers.split(',')
 
                 try:
 
@@ -75,7 +76,7 @@ def view_workshop():
             except Exception as e:
                 click.echo(f"⚠️ Error displaying workshop {num + 1}: {e}")
                 continue
-            main_menu()
+        main_menu()
     
     except Exception as e:
         click.echo(f'⚠️ Error while fetching upcoming workshops: {e}')
@@ -182,7 +183,7 @@ def create_workshop():
     #Mentors
     for emails in mentors_email:
         if emails != user_email:
-            attendees.append({'email': emails.strip(), 'optional': True})
+            attendees.append({'email': emails.strip(), 'optional': role == 'mentor'})
 
     #peers
     for email in peers_email:
@@ -260,11 +261,11 @@ def cancel_workshop():
     click.echo(f"Fetching all workshops...")
 
     try:
-        workshop_ref = db.collection('workshops').where(filter=firestore.FieldFilter('mentors','array_contains', user_email)).stream()
-        workshops = list(workshop_ref)
+        workshop_ref = db.collection('workshops').where('organizer', '==', user_email).stream()
+        workshops = [workshop for workshop in workshop_ref]
 
         if not workshops:
-            click.echo("⚠️ No workshops found.")
+            click.echo("⚠️ No workshops were created.")
             main_menu()
             return
         
