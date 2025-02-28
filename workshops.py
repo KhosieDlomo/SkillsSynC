@@ -258,20 +258,30 @@ def cancel_workshop():
         main_menu()
         return
 
+    click.echo(f"🔎 Searching for workshops where organizer = {user_email}")
     click.echo(f"Fetching all workshops...")
 
     try:
-        workshop_ref = db.collection('workshops').where('organizer', '==', user_email).stream()
-        workshops = [workshop for workshop in workshop_ref]
+        workshops = db.collection('workshops').filter('organizer', '==', user_email).stream()
+        # workshops = [workshop for workshop in workshop_ref]
 
         if not workshops:
             click.echo("⚠️ No workshops were created.")
+            
+            all_workshops = list(db.collection('workshops').stream())
+            if not all_workshops:
+                click.echo("⚠️ No workshops exist in Firestore at all. Check database.")
+            else:
+                click.echo(f"✅ Found {len(all_workshops)} workshops, but none match the organizer '{user_email}'.")
+            
             main_menu()
             return
+
         
         click.echo('\n--- Upcoming Workshops: ---')
         for num, workshop in enumerate(workshops):
             try:
+                workshop_data = workshop.to_dict()
                 title = workshop.get('Title', 'Untitled Workshop')
                 date = workshop.get('Date', 'Unknown Date')
                 start_time = workshop.get('start_time', 'Unknown Start Time')
