@@ -262,7 +262,7 @@ def cancel_workshop():
     click.echo(f"Fetching all workshops...")
 
     try:
-        workshops = db.collection('workshops').filter('organizer', '==', user_email).stream()
+        workshops = db.collection('workshops').where(filter=firestore.FieldFilter('organizer', '==', user_email)).stream()
         # workshops = [workshop for workshop in workshop_ref]
 
         if not workshops:
