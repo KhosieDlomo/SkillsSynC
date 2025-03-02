@@ -72,7 +72,7 @@ def view_workshop():
                     click.echo(f"├─ 🗓️ Date: {formatted_date}")
                     click.echo(f"├─ 🕒 Time: {formatted_start_time} - {formatted_end_time}")
                     click.echo(f"├─ 📌 Location: {location}")
-                    click.echo(f"├─ 👤 Mentors: {','.join(mentors) if mentors else 'None'}")
+                    click.echo(f"├─ 👤 Mentors: {''.join(mentors) if mentors else 'None'}")
                     click.echo(f"├─ 👥 Peers: {', '.join(peers) if peers else 'None'}")
                     if workshop.get('online_link'):
                         click.echo(f"└─ 🔗 Online Link: {online_link}")
@@ -323,17 +323,7 @@ def cancel_workshop():
             click.echo("⚠️ No upcoming workshops found.")
             main_menu()
             return
-        
-            # all_workshops = list(db.collection('workshops').stream())
-            # if not all_workshops:
-            #     click.echo("⚠️ No workshops exist in Firestore at all. Check database.")
-            # else:
-            #     click.echo(f"✅ Found {len(all_workshops)} workshops, but none match the organizer '{user_email}'.")
-            
-            # main_menu()
-            # return
-
-        
+                
         click.echo('\n--- Upcoming Workshops: ---')
         for num, workshop in enumerate(upcoming_workshops, start=1):
             try:
@@ -368,8 +358,8 @@ def cancel_workshop():
                 click.echo(f"├─ 🗓️ Date: {formatted_date}")
                 click.echo(f"├─ 🕒 Time: {formatted_start_time} - {formatted_end_time}")
                 click.echo(f"├─ 📍 Location: {location}")
-                click.echo(f"├─ 👤 Mentors: {', '.join(set(mentors))}")
-                click.echo(f"├─ 👥 Peers: {', '.join(set(peers))}")
+                click.echo(f"├─ 👤 Mentors: {''.join(set(mentors))}")
+                click.echo(f"├─ 👥 Attendees: {', '.join(set(attendees))}")
                 if online_link:
                     click.echo(f"└─ 🔗 Online Link: {online_link}")
                 else:
