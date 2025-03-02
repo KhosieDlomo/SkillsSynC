@@ -50,10 +50,10 @@ def view_workshop():
                     online_link = workshop.get('online_link', '')
 
                     if isinstance(mentors, str):
-                        mentors = mentors.split(',')
+                        mentors = [mentors]
 
                     if isinstance(peers, str):
-                        peers = peers.split(',')
+                        peers = [peers]
 
                     try:
 
@@ -234,14 +234,31 @@ def create_workshop():
     try:
         event_result = service.events().insert(calendarId='primary', body=event,sendUpdates='all').execute()
 
+        mentors = []
+        peers = []
+
+        users_ref = db.collection('users').stream()
+        for user in users_ref:
+            user_data = user.to_dict()
+            user_role = user_data.get('role', 'peer')
+            user_email = user_data.get('email')
+
+            if user_role == 'mentor':
+                mentors.append(user_email)
+            elif user_role == 'peer':
+                peers.append(user_email)
+
+        if role == 'mentor' and user_email not in mentors:
+            mentors.append(user_email)
+
         workshop_data = {
             'Title': title,
             'Date': date,
             'start_time': start_hour.isoformat(),
             'end_time': end_hour.isoformat(),
             'location': location,
-            'mentors': list(user_email),
-            'peers': list(peers_email),
+            'mentors': mentors,
+            'peers': peers_email,
             'google_event_id': event_result.get('id'),
             'online_link': online_link,
             'organizer' : user_email
@@ -293,6 +310,7 @@ def cancel_workshop():
             click.echo("⚠️ No workshops were created.")
             main_menu()
             return
+        
         current_time = datetime.datetime.now()
         upcoming_workshops = []
         for workshop in workshops:
@@ -341,6 +359,10 @@ def cancel_workshop():
                     formatted_date = date
                     formatted_start_time = start_time
                     formatted_end_time = end_time
+
+                if isinstance(mentors, str):
+                    mentors = [mentors]
+
 
                 click.echo(f"\n📋 Workshop {num + 1}")
                 click.echo(f"├─ 📝 Title: {title}")
