@@ -16,67 +16,91 @@ def view_workshop():
         return
     
     try:
-        workshops = db.collection('workshops').stream()
-        all_workshop = []
-        for workshop in workshops:
-            data = workshop.to_dict()
-            all_workshop.append(data)
-                
-        if not all_workshop:
-            click.echo('⚠️ No upcoming workshops found.')
-            main_menu()
-            return
-        
-        all_workshop.sort(key=lambda i: datetime.datetime.strptime(i['Date'], '%d/%m/%Y'))
-        
-        click.echo('📩 ---Upcoming workshops---')
-        for num, workshop in enumerate(all_workshop):
-            try:
-                title = workshop.get('Title', 'Untitled Workshop')
-                date = workshop.get('Date', 'Unknown Date')
-                start_time = workshop.get('start_time', 'Unknown Start Time')
-                end_time = workshop.get('end_time', 'Unknown End Time')
-                location = workshop.get('location', 'Unknown Location')
-                mentors = workshop.get('mentors', [])
-                peers = workshop.get('peers', [])
-                online_link = workshop.get('online_link', '')
+        per_page = 5
+        page_num = 1
 
-                if isinstance(mentors, str):
-                    mentors = mentors.split(',')
-
-                if isinstance(peers, str):
-                    peers = peers.split(',')
-
-                try:
-
-                    start_time = datetime.datetime.fromisoformat(start_time)
-                    end_time = datetime.datetime.fromisoformat(end_time)
-                    formatted_date = start_time.strftime('%A, %d %B %Y')
-                    formatted_start_time = start_time.strftime('%I:%M %p')
-                    formatted_end_time = end_time.strftime('%I:%M %p')
-
-                except ValueError:
-                    formatted_date = date
-                    formatted_start_time = start_time
-                    formatted_end_time = end_time
-
-                click.echo(f"\n📋 Workshop {num + 1}")
-                click.echo(f"├─ 📝 Title: {title}")
-                click.echo(f"├─ 🗓️ Date: {formatted_date}")
-                click.echo(f"├─ 🕒 Time: {formatted_start_time} - {formatted_end_time}")
-                click.echo(f"├─ 📌 Location: {location}")
-                click.echo(f"├─ 👤 Mentors: {', '.join(set(mentors))}")
-                click.echo(f"├─ 👥 Peers: {', '.join(set(peers))}")
-                if workshop.get('online_link'):
-                    click.echo(f"└─ 🔗 Online Link: {online_link}")
-                else:
-                    click.echo("└─ 🔗 Online Link: Not provided")
-                click.echo("-" * 80)  
+        while True:
+            workshops_ref = db.collection('workshops').stream()
+            all_workshop = [workshop.to_dict() for workshop in workshops_ref]
+            all_workshop.sort(key=lambda i: datetime.datetime.strptime(i['Date'], '%d/%m/%Y'))
             
-            except Exception as e:
-                click.echo(f"⚠️ Error displaying workshop {num + 1}: {e}")
-                continue
-        main_menu()
+                    
+            if not all_workshop:
+                click.echo('⚠️ No upcoming workshops found.')
+                main_menu()
+                return
+            
+            total_pages = (len(all_workshop) + per_page - 1) // per_page
+
+            start_page = (page_num - 1) * per_page
+            end_page = start_page + per_page
+            workshop_page = all_workshop[start_page:end_page]
+            
+            click.echo(f'📩 ---Upcoming Workshops (Page {page_num} of {total_pages})---')
+            
+            for num, workshop in enumerate(workshop_page, start=1):
+                try:
+                    title = workshop.get('Title', 'Untitled Workshop')
+                    date = workshop.get('Date', 'Unknown Date')
+                    start_time = workshop.get('start_time', 'Unknown Start Time')
+                    end_time = workshop.get('end_time', 'Unknown End Time')
+                    location = workshop.get('location', 'Unknown Location')
+                    mentors = workshop.get('mentors', [])
+                    peers = workshop.get('peers', [])
+                    online_link = workshop.get('online_link', '')
+
+                    if isinstance(mentors, str):
+                        mentors = mentors.split(',')
+
+                    if isinstance(peers, str):
+                        peers = peers.split(',')
+
+                    try:
+
+                        start_time = datetime.datetime.fromisoformat(start_time)
+                        end_time = datetime.datetime.fromisoformat(end_time)
+                        formatted_date = start_time.strftime('%A, %d %B %Y')
+                        formatted_start_time = start_time.strftime('%I:%M %p')
+                        formatted_end_time = end_time.strftime('%I:%M %p')
+
+                    except ValueError:
+                        formatted_date = date
+                        formatted_start_time = start_time
+                        formatted_end_time = end_time
+
+                    click.echo(f"\n📋 Workshop {num + 1}")
+                    click.echo(f"├─ 📝 Title: {title}")
+                    click.echo(f"├─ 🗓️ Date: {formatted_date}")
+                    click.echo(f"├─ 🕒 Time: {formatted_start_time} - {formatted_end_time}")
+                    click.echo(f"├─ 📌 Location: {location}")
+                    click.echo(f"├─ 👤 Mentors: {', '.join(set(mentors))}")
+                    click.echo(f"├─ 👥 Peers: {', '.join(set(peers))}")
+                    if workshop.get('online_link'):
+                        click.echo(f"└─ 🔗 Online Link: {online_link}")
+                    else:
+                        click.echo("└─ 🔗 Online Link: Not provided")
+                    click.echo("-" * 80)  
+                
+                except Exception as e:
+                    click.echo(f"⚠️ Error displaying workshop {num + 1}: {e}")
+                    continue
+            
+            if page_num > 1:
+                click.echo("Enter 'p' for previous page")
+            if page_num < total_pages:
+                click.echo("Enter 'n' for next page")
+            click.echo("Enter 'm' to return to the main menu")
+
+            choice = click.prompt("Enter your choice").lower()
+            if choice == 'p' and page_num > 1:
+                page_num -= 1
+            elif choice == 'n' and page_num < total_pages:
+                page_num += 1
+            elif choice == 'm':
+                main_menu()
+                return
+            else:
+                click.echo("⚠️ Invalid choice. Please try again.")
     
     except Exception as e:
         click.echo(f'⚠️ Error while fetching upcoming workshops: {e}')
@@ -262,34 +286,49 @@ def cancel_workshop():
     click.echo(f"Fetching all workshops...")
 
     try:
-        workshops = db.collection('workshops').where(filter=firestore.FieldFilter('organizer', '==', user_email)).stream()
-        # workshops = [workshop for workshop in workshop_ref]
+        workshop_ref = db.collection('workshops').where(filter=firestore.FieldFilter('organizer', '==', user_email)).stream()
+        workshops = [workshop for workshop in workshop_ref]
 
         if not workshops:
             click.echo("⚠️ No workshops were created.")
-            
-            all_workshops = list(db.collection('workshops').stream())
-            if not all_workshops:
-                click.echo("⚠️ No workshops exist in Firestore at all. Check database.")
-            else:
-                click.echo(f"✅ Found {len(all_workshops)} workshops, but none match the organizer '{user_email}'.")
-            
             main_menu()
             return
+        current_time = datetime.datetime.now()
+        upcoming_workshops = []
+        for workshop in workshops:
+            workshop_data = workshop.to_dict()
+            end_time = datetime.datetime.fromisoformat(workshop_data.get('end_time', ''))
+
+            if end_time > current_time:
+                upcoming_workshops.append(workshop)
+            
+        if not upcoming_workshops:
+            click.echo("⚠️ No upcoming workshops found.")
+            main_menu()
+            return
+        
+            # all_workshops = list(db.collection('workshops').stream())
+            # if not all_workshops:
+            #     click.echo("⚠️ No workshops exist in Firestore at all. Check database.")
+            # else:
+            #     click.echo(f"✅ Found {len(all_workshops)} workshops, but none match the organizer '{user_email}'.")
+            
+            # main_menu()
+            # return
 
         
         click.echo('\n--- Upcoming Workshops: ---')
-        for num, workshop in enumerate(workshops):
+        for num, workshop in enumerate(upcoming_workshops, start=1):
             try:
                 workshop_data = workshop.to_dict()
-                title = workshop.get('Title', 'Untitled Workshop')
-                date = workshop.get('Date', 'Unknown Date')
-                start_time = workshop.get('start_time', 'Unknown Start Time')
-                end_time = workshop.get('end_time', 'Unknown End Time')
-                location = workshop.get('location', 'Unknown Location')
-                mentors = workshop.get('mentors', [])
-                peers = workshop.get('peers', [])
-                online_link = workshop.get('online_link', '')
+                title = workshop_data.get('Title', 'Untitled Workshop')
+                date = workshop_data.get('Date', 'Unknown Date')
+                start_time = workshop_data.get('start_time', 'Unknown Start Time')
+                end_time = workshop_data.get('end_time', 'Unknown End Time')
+                location = workshop_data.get('location', 'Unknown Location')
+                mentors = workshop_data.get('mentors', [])
+                peers = workshop_data.get('peers', [])
+                online_link = workshop_data.get('online_link', '')
                     
                 try:
 
@@ -298,7 +337,6 @@ def cancel_workshop():
                     formatted_date = start_time.strftime('%A, %d %B %Y')
                     formatted_start_time = start_time.strftime('%I:%M %p')
                     formatted_end_time = end_time.strftime('%I:%M %p')
-
                 except ValueError:
                     formatted_date = date
                     formatted_start_time = start_time
@@ -315,10 +353,10 @@ def cancel_workshop():
                     click.echo(f"└─ 🔗 Online Link: {online_link}")
                 else:
                     click.echo("└─ 🔗 Online Link: Not provided")
-                click.echo("-" * 100)
+                click.echo("-" * 80)
 
             except Exception as e:
-                click.echo(f"⚠️ Error displaying workshop {num + 1}: {e}")
+                click.echo(f"⚠️ Error displaying workshop {num}: {e}")
                 continue
             
         while True:
@@ -340,6 +378,11 @@ def cancel_workshop():
         selected_workshop = workshops[choice - 1]
         workshop_data = selected_workshop.to_dict()
         event_id = workshop_data.get('google_event_id')
+
+        if workshop_data.get('organizer') != user_email:
+            click.echo("⚠️ You are not authorized to cancel this workshop.")
+            main_menu()
+            return
 
         service = get_calendar()
         if not service:
