@@ -72,7 +72,7 @@ def view_workshop():
                     click.echo(f"├─ 🗓️ Date: {formatted_date}")
                     click.echo(f"├─ 🕒 Time: {formatted_start_time} - {formatted_end_time}")
                     click.echo(f"├─ 📌 Location: {location}")
-                    click.echo(f"├─ 👤 Mentors: {''.join(mentors) if mentors else 'None'}")
+                    click.echo(f"├─ 👤 Mentors: {', '.join(mentors) if mentors else 'None'}")
                     click.echo(f"├─ 👥 Peers: {', '.join(peers) if peers else 'None'}")
                     if workshop.get('online_link'):
                         click.echo(f"└─ 🔗 Online Link: {online_link}")
@@ -199,16 +199,16 @@ def create_workshop():
             if mentor_email:
                 mentors_email.add(mentor_email.strip())
 
-    peers_email = peers_email - mentors_email
-
-    if user_email in mentors_email:
-        peers_email.discard(user_email)
+    if user_email not in mentors_email:
+        click.echo("⚠️ Only mentors can create workshops.")
+        main_menu()
+        return
     
     attendees = []
     #Mentors
     for emails in mentors_email:
-        if emails == user_email:
-            attendees.append({'email': emails.strip(), 'optional': role == 'mentor'})
+        if emails != user_email:
+            attendees.append({'email': emails.strip(), 'optional': True})
 
     #peers
     for email in peers_email:
@@ -358,7 +358,7 @@ def cancel_workshop():
                 click.echo(f"├─ 🗓️ Date: {formatted_date}")
                 click.echo(f"├─ 🕒 Time: {formatted_start_time} - {formatted_end_time}")
                 click.echo(f"├─ 📍 Location: {location}")
-                click.echo(f"├─ 👤 Mentors: {''.join(set(mentors))}")
+                click.echo(f"├─ 👤 Mentors: {', '.join(set(mentors))}")
                 click.echo(f"├─ 👥 Attendees: {', '.join(set(attendees))}")
                 if online_link:
                     click.echo(f"└─ 🔗 Online Link: {online_link}")
