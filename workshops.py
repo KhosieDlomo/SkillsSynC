@@ -51,30 +51,29 @@ def view_workshop():
 
                     if isinstance(mentors, str):
                         mentors = [mentors]
-
                     if isinstance(peers, str):
                         peers = [peers]
 
-                    try:
+                    peers = [peer for peer in peers if peer not in mentors]
 
+                    try:
                         start_time = datetime.datetime.fromisoformat(start_time)
                         end_time = datetime.datetime.fromisoformat(end_time)
                         formatted_date = start_time.strftime('%A, %d %B %Y')
                         formatted_start_time = start_time.strftime('%I:%M %p')
                         formatted_end_time = end_time.strftime('%I:%M %p')
-
                     except ValueError:
                         formatted_date = date
                         formatted_start_time = start_time
                         formatted_end_time = end_time
 
-                    click.echo(f"\n📋 Workshop {num + 1}")
+                    click.echo(f"\n📋 Workshop {num}")
                     click.echo(f"├─ 📝 Title: {title}")
                     click.echo(f"├─ 🗓️ Date: {formatted_date}")
                     click.echo(f"├─ 🕒 Time: {formatted_start_time} - {formatted_end_time}")
                     click.echo(f"├─ 📌 Location: {location}")
-                    click.echo(f"├─ 👤 Mentors: {', '.join(set(mentors))}")
-                    click.echo(f"├─ 👥 Peers: {', '.join(set(peers))}")
+                    click.echo(f"├─ 👤 Mentors: {','.join(mentors) if mentors else 'None'}")
+                    click.echo(f"├─ 👥 Peers: {', '.join(peers) if peers else 'None'}")
                     if workshop.get('online_link'):
                         click.echo(f"└─ 🔗 Online Link: {online_link}")
                     else:
@@ -82,21 +81,21 @@ def view_workshop():
                     click.echo("-" * 80)  
                 
                 except Exception as e:
-                    click.echo(f"⚠️ Error displaying workshop {num + 1}: {e}")
+                    click.echo(f"⚠️ Error displaying workshop {num}: {e}")
                     continue
             
             if page_num > 1:
                 click.echo("Enter 'p' for previous page")
             if page_num < total_pages:
                 click.echo("Enter 'n' for next page")
-            click.echo("Enter 'm' to return to the main menu")
+            click.echo("Enter 'menu' to return to the main menu")
 
             choice = click.prompt("Enter your choice").lower()
             if choice == 'p' and page_num > 1:
                 page_num -= 1
             elif choice == 'n' and page_num < total_pages:
                 page_num += 1
-            elif choice == 'm':
+            elif choice == 'menu':
                 main_menu()
                 return
             else:
@@ -200,21 +199,21 @@ def create_workshop():
             if mentor_email:
                 mentors_email.add(mentor_email.strip())
 
-    if user_email:
-        peers_email.add(user_email)
+    peers_email = peers_email - mentors_email
+
+    if user_email in mentors_email:
+        peers_email.discard(user_email)
     
     attendees = []
     #Mentors
     for emails in mentors_email:
-        if emails != user_email:
+        if emails == user_email:
             attendees.append({'email': emails.strip(), 'optional': role == 'mentor'})
 
     #peers
     for email in peers_email:
         attendees.append({'email': email.strip(), 'optional': False})
-
-    # attendees = [{'email': email.strip()} for email in mentors_email.union(peers_email)]
-    
+   
     event = {'title': title,
              'description': description,
              'location': location,
@@ -257,8 +256,8 @@ def create_workshop():
             'start_time': start_hour.isoformat(),
             'end_time': end_hour.isoformat(),
             'location': location,
-            'mentors': mentors,
-            'peers': peers_email,
+            'mentors': list(mentors_email),
+            'peers': list(peers_email),
             'google_event_id': event_result.get('id'),
             'online_link': online_link,
             'organizer' : user_email
