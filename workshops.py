@@ -48,13 +48,19 @@ def view_workshop():
                     mentors = workshop.get('mentors', [])
                     peers = workshop.get('peers', [])
                     online_link = workshop.get('online_link', '')
+                    accepted_mentors = workshop.get('accepted_mentors', [])
+                    organizer = workshop.get('organizer', '')
 
                     if isinstance(mentors, str):
                         mentors = [mentors]
                     if isinstance(peers, str):
                         peers = [peers]
 
-                    peers = [peer for peer in peers if peer not in mentors]
+                    if organizer and organizer not in mentors:
+                        mentors.append(organizer)
+
+                    attendees = list(set([organizer] + accepted_mentors + peers))
+                    attendees = [attendee for attendee in attendees if attendee]
 
                     try:
                         start_time = datetime.datetime.fromisoformat(start_time)
@@ -72,8 +78,8 @@ def view_workshop():
                     click.echo(f"├─ 🗓️ Date: {formatted_date}")
                     click.echo(f"├─ 🕒 Time: {formatted_start_time} - {formatted_end_time}")
                     click.echo(f"├─ 📌 Location: {location}")
-                    click.echo(f"├─ 👤 Mentors: {', '.join(mentors) if mentors else 'None'}")
-                    click.echo(f"├─ 👥 Peers: {', '.join(peers) if peers else 'None'}")
+                    click.echo(f"├─ 👤 Mentors: {organizer}")
+                    click.echo(f"├─ 👥 Attendees: {', '.join(attendees) if attendees else 'None'}")
                     if workshop.get('online_link'):
                         click.echo(f"└─ 🔗 Online Link: {online_link}")
                     else:
@@ -256,11 +262,12 @@ def create_workshop():
             'start_time': start_hour.isoformat(),
             'end_time': end_hour.isoformat(),
             'location': location,
-            'mentors': list(mentors_email),
+            'mentors': [user_email],
             'peers': list(peers_email),
             'google_event_id': event_result.get('id'),
             'online_link': online_link,
-            'organizer' : user_email
+            'organizer' : user_email,
+            'accepted_mentors': [user_email]
         }
         db.collection('workshops').add(workshop_data)
         click.echo('✅ Workshop created and all peers added successfully.')
@@ -298,8 +305,7 @@ def cancel_workshop():
         main_menu()
         return
 
-    click.echo(f"🔎 Searching for workshops where organizer = {user_email}")
-    click.echo(f"Fetching all workshops...")
+    click.echo(f"🔎Fetching all workshops...")
 
     try:
         workshop_ref = db.collection('workshops').where(filter=firestore.FieldFilter('organizer', '==', user_email)).stream()
@@ -323,103 +329,132 @@ def cancel_workshop():
             click.echo("⚠️ No upcoming workshops found.")
             main_menu()
             return
-                
-        click.echo('\n--- Upcoming Workshops: ---')
-        for num, workshop in enumerate(upcoming_workshops, start=1):
-            try:
-                workshop_data = workshop.to_dict()
-                title = workshop_data.get('Title', 'Untitled Workshop')
-                date = workshop_data.get('Date', 'Unknown Date')
-                start_time = workshop_data.get('start_time', 'Unknown Start Time')
-                end_time = workshop_data.get('end_time', 'Unknown End Time')
-                location = workshop_data.get('location', 'Unknown Location')
-                mentors = workshop_data.get('mentors', [])
-                peers = workshop_data.get('peers', [])
-                online_link = workshop_data.get('online_link', '')
-                    
-                try:
 
-                    start_time = datetime.datetime.fromisoformat(start_time)
-                    end_time = datetime.datetime.fromisoformat(end_time)
-                    formatted_date = start_time.strftime('%A, %d %B %Y')
-                    formatted_start_time = start_time.strftime('%I:%M %p')
-                    formatted_end_time = end_time.strftime('%I:%M %p')
-                except ValueError:
-                    formatted_date = date
-                    formatted_start_time = start_time
-                    formatted_end_time = end_time
-
-                if isinstance(mentors, str):
-                    mentors = [mentors]
-
-
-                click.echo(f"\n📋 Workshop {num + 1}")
-                click.echo(f"├─ 📝 Title: {title}")
-                click.echo(f"├─ 🗓️ Date: {formatted_date}")
-                click.echo(f"├─ 🕒 Time: {formatted_start_time} - {formatted_end_time}")
-                click.echo(f"├─ 📍 Location: {location}")
-                click.echo(f"├─ 👤 Mentors: {', '.join(set(mentors))}")
-                click.echo(f"├─ 👥 Attendees: {', '.join(set(attendees))}")
-                if online_link:
-                    click.echo(f"└─ 🔗 Online Link: {online_link}")
-                else:
-                    click.echo("└─ 🔗 Online Link: Not provided")
-                click.echo("-" * 80)
-
-            except Exception as e:
-                click.echo(f"⚠️ Error displaying workshop {num}: {e}")
-                continue
-            
+        per_page = 5
+        page_num = 1
+        total_pages = (len(upcoming_workshops) + per_page - 1) // per_page
+        
         while True:
-            try:
-                choice = int(click.prompt(f"Enter the number of the workshop to cancel (1 - {len(workshops)}), or 0 to cancel "))
-                if 0 <= choice <= len(workshops):
-                    break
-                else:
-                    click.echo("⚠️ Invalid choice. Please enter a number within the range.")
+            start_page = (page_num - 1) * per_page
+            end_page = start_page + per_page
+            workshop_page = upcoming_workshops[start_page:end_page]
+                
+            click.echo('\n--- Upcoming Workshops: ---')
+            for num, workshop in enumerate(workshop_page, start=1):
+                try:
+                    # workshop_data = workshop.to_dict()
+                    title = workshop_data.get('Title', 'Untitled Workshop')
+                    date = workshop_data.get('Date', 'Unknown Date')
+                    start_time = workshop_data.get('start_time', 'Unknown Start Time')
+                    end_time = workshop_data.get('end_time', 'Unknown End Time')
+                    location = workshop_data.get('location', 'Unknown Location')
+                    mentors = workshop_data.get('mentors', [])
+                    peers = workshop_data.get('peers', [])
+                    online_link = workshop_data.get('online_link', '')
+                    accepted_mentors = workshop_data.get('accepted_mentors', [])
+                    organizer = workshop_data.get('organizer', '')
+                        
+                    attendees = list(set([organizer] + accepted_mentors + peers))
+                    attendees = [attendee for attendee in attendees if attendee]
+
+                    try:
+
+                        start_time = datetime.datetime.fromisoformat(start_time)
+                        end_time = datetime.datetime.fromisoformat(end_time)
+                        formatted_date = start_time.strftime('%A, %d %B %Y')
+                        formatted_start_time = start_time.strftime('%I:%M %p')
+                        formatted_end_time = end_time.strftime('%I:%M %p')
+                    except ValueError:
+                        formatted_date = date
+                        formatted_start_time = start_time
+                        formatted_end_time = end_time
+
+                    if isinstance(mentors, str):
+                        mentors = [mentors]
+
+
+                    click.echo(f"\n📋 Workshop {num}")
+                    click.echo(f"├─ 📝 Title: {title}")
+                    click.echo(f"├─ 🗓️ Date: {formatted_date}")
+                    click.echo(f"├─ 🕒 Time: {formatted_start_time} - {formatted_end_time}")
+                    click.echo(f"├─ 📍 Location: {location}")
+                    click.echo(f"├─ 👤 Mentors: {organizer}")
+                    click.echo(f"├─ 👥 Attendees: {', '.join(attendees) if attendees else 'None'}")
+                    if online_link:
+                        click.echo(f"└─ 🔗 Online Link: {online_link}")
+                    else:
+                        click.echo("└─ 🔗 Online Link: Not provided")
+                    click.echo("-" * 80)
+
+                except Exception as e:
+                    click.echo(f"⚠️ Error displaying workshop {num}: {e}")
+                    continue
+                
+            while True:
+                try:
+                    choice = int(click.prompt(f"Enter the number of the workshop to cancel (1 - {len(workshops)}), or 0 to cancel "))
+                    if 0 <= choice <= len(workshops):
+                        break
+                    else:
+                        click.echo("⚠️ Invalid choice. Please enter a number within the range.")
+                
+                except ValueError:
+                    click.echo("⚠️ Invalid input. Please enter a number.")
+
+            if choice == 0:
+                click.echo("❌ Cancel operation aborted.")
+                main_menu()
+                return
             
-            except ValueError:
-                click.echo("⚠️ Invalid input. Please enter a number.")
+            selected_workshop = workshops[choice - 1]
+            workshop_data = selected_workshop.to_dict()
+            event_id = workshop_data.get('google_event_id')
 
-        if choice == 0:
-            click.echo("❌ Cancel operation aborted.")
-            main_menu()
-            return
-        
-        selected_workshop = workshops[choice - 1]
-        workshop_data = selected_workshop.to_dict()
-        event_id = workshop_data.get('google_event_id')
+            if workshop_data.get('organizer') != user_email:
+                click.echo("⚠️ You are not authorized to cancel this workshop.")
+                main_menu()
+                return
 
-        if workshop_data.get('organizer') != user_email:
-            click.echo("⚠️ You are not authorized to cancel this workshop.")
-            main_menu()
-            return
+            service = get_calendar()
+            if not service:
+                click.echo("⚠️ Failed to initialize Google Calendar service.")
+                main_menu()
+                return
 
-        service = get_calendar()
-        if not service:
-            click.echo("⚠️ Failed to initialize Google Calendar service.")
-            main_menu()
-            return
+            try:
+                service.events().delete(calendarId='primary', eventId=event_id).execute()
+                click.echo("✅ Google Calendar event deleted.")
+            except HttpError as e:
+                click.echo(f"⚠️Error while deleting Google Calendar event: {e}")
+                main_menu()
+                return
 
-        try:
-            service.events().delete(calendarId='primary', eventId=event_id).execute()
-            click.echo("✅ Google Calendar event deleted.")
-        except HttpError as e:
-            click.echo(f"⚠️Error while deleting Google Calendar event: {e}")
-            main_menu()
-            return
+            try:
+                db.collection('workshops').document(selected_workshop.id).delete()
+                click.echo("✅ Workshop deleted from Firestore.")
+            except Exception as e:
+                click.echo(f"⚠️ Error while deleting workshop from Firestore: {e}")
+                main_menu()
+                return
+             
+            if page_num > 1:
+                click.echo("Enter 'p' for previous page")
+            if page_num < total_pages:
+                click.echo("Enter 'n' for next page")
+            click.echo("Enter 'menu' to return to the main menu")
 
-        try:
-            db.collection('workshops').document(selected_workshop.id).delete()
-            click.echo("✅ Workshop deleted from Firestore.")
-        except Exception as e:
-            click.echo(f"⚠️ Error while deleting workshop from Firestore: {e}")
-            main_menu()
-            return
-        
-        attendees = workshop_data.get('mentors', []) + workshop_data.get('peers', [])
-        click.echo(f"✅ Workshop '{workshop_data['Title']}' has been canceled.")
-        click.echo(f"📩 Notification sent to: {', '.join(set(attendees))}")
+            choice = click.prompt("Enter your choice").lower()
+            if choice == 'p' and page_num > 1:
+                page_num -= 1
+            elif choice == 'n' and page_num < total_pages:
+                page_num += 1
+            elif choice == 'menu':
+                main_menu()
+                return
+            
+            attendees = list(set([workshop_data.get('organizer')] + workshop_data.get('accepted_mentors', []) + workshop_data.get('peers', [])))
+            click.echo(f"✅ Workshop '{workshop_data['Title']}' has been canceled.")
+            click.echo(f"📩 Notification sent to: {', '.join(set(attendees))}")
 
     except Exception as e:
         click.echo(f"⚠️ Error canceling workshop: {e}")
