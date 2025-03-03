@@ -5,6 +5,9 @@ from events import get_calendar
 from google.cloud import firestore
 from googleapiclient.errors import HttpError
 from login import signin, signup
+import pytz
+
+SAST = pytz.timezone('Africa/Johannesburg')
 
 #workshops
 @click.command()
@@ -20,7 +23,7 @@ def view_workshop():
         page_num = 1
 
         while True:
-            workshops_ref = db.collection('workshops').stream()
+            workshops_ref = db.collection('workshops').where('canceled', '==', False).stream()
             all_workshop = [workshop.to_dict() for workshop in workshops_ref]
             all_workshop.sort(key=lambda i: datetime.datetime.strptime(i['Date'], '%d/%m/%Y'))
             
@@ -156,8 +159,8 @@ def create_workshop():
         online_link = click.prompt("Enter the online meeting link ")
 
     try:
-        start_hour = datetime.datetime.strptime(f'{date} {start_time}', '%d/%m/%Y %H:%M')
-        end_hour = datetime.datetime.strptime(f'{date} {end_time}', '%d/%m/%Y %H:%M')
+        start_hour = SAST.localize(datetime.datetime.strptime(f'{date} {start_time}', '%d/%m/%Y %H:%M'))
+        end_hour = SAST.localize(datetime.datetime.strptime(f'{date} {end_time}', '%d/%m/%Y %H:%M'))
 
     except ValueError:
         click.echo('⚠️ Invalid date or time format, please use DD/MM/YYYY HH:MM')
@@ -189,21 +192,12 @@ def create_workshop():
         return
     
     peers = db.collection('users').where(filter=firestore.FieldFilter('role', '==', 'peer')).stream()
-    peers_email = set()
-    for peer in peers:
-        if peer.exists:
-            peer_email = peer.to_dict().get('email')
-            if peer_email:
-                peers_email.add(peer_email.strip())
-
-    
+    peers_email = {peer.to_dict().get('email').strip() for peer in peers if peer.exists}
+        
     mentors = db.collection('users').where(filter=firestore.FieldFilter('role', '==', 'mentor')).stream()
-    mentors_email = set()  
-    for mentor in mentors:
-        if mentor.exists:
-            mentor_email = mentor.to_dict().get('email')
-            if mentor_email:
-                mentors_email.add(mentor_email.strip())
+    mentors_email = {mentor.to_dict().get('email').strip() for mentor in mentors if mentor.exists}  
+    
+    attendees = [{'email': email.strip(), 'optional':email != user_email} for email in mentors_email.union(peers_email)]
 
     if user_email not in mentors_email:
         click.echo("⚠️ Only mentors can create workshops.")
@@ -223,8 +217,8 @@ def create_workshop():
     event = {'title': title,
              'description': description,
              'location': location,
-             'start': {'dateTime': start_hour.isoformat(), 'timeZone': 'UTC'},
-             'end': {'dateTime': end_hour.isoformat(), 'timeZone': 'UTC'},
+             'start': {'dateTime': start_hour.isoformat(), 'timeZone': 'Africa/Johannesburg'},
+             'end': {'dateTime': end_hour.isoformat(), 'timeZone': 'Africa/Johannesburg'},
              'attendees': attendees,
              'organizer': {'email': user_email},
              'reminders': {'useDefault': False,
@@ -239,23 +233,6 @@ def create_workshop():
     try:
         event_result = service.events().insert(calendarId='primary', body=event,sendUpdates='all').execute()
 
-        mentors = []
-        peers = []
-
-        users_ref = db.collection('users').stream()
-        for user in users_ref:
-            user_data = user.to_dict()
-            user_role = user_data.get('role', 'peer')
-            user_email = user_data.get('email')
-
-            if user_role == 'mentor':
-                mentors.append(user_email)
-            elif user_role == 'peer':
-                peers.append(user_email)
-
-        if role == 'mentor' and user_email not in mentors:
-            mentors.append(user_email)
-
         workshop_data = {
             'Title': title,
             'Date': date,
@@ -267,7 +244,8 @@ def create_workshop():
             'google_event_id': event_result.get('id'),
             'online_link': online_link,
             'organizer' : user_email,
-            'accepted_mentors': [user_email]
+            'accepted_mentors': [user_email],
+            'attendees': list(mentors_email.union(peers_email))
         }
         db.collection('workshops').add(workshop_data)
         click.echo('✅ Workshop created and all peers added successfully.')
@@ -278,6 +256,94 @@ def create_workshop():
         click.echo(f'⚠️ Failed to create workshop: {e}')
         
     main_menu()
+
+@click.command()
+def update_workshop():
+    """Updating an existing workshop."""
+    from main import main_menu
+
+    if not current_session['logged_in']:
+        return
+    
+    user_id = current_session.get('user_id')
+    user_email = current_session.get('email')
+
+    if not user_id or not user_email:
+        click.echo('❌ User not authenticated. Please sign in.')
+        main_menu()
+        return
+    
+    user_doc = db.collection('users').document(user_id).get()
+    if user_doc.exists:
+        role = user_doc.to_dict().get('role', 'peer')
+    else:
+        role = 'peer'
+    
+    if role != 'mentor':
+        click.echo("⚠️ Only mentors can update workshops.")
+        main_menu()
+        return
+    
+    click.echo("🔎Fetching all workshops...")
+
+    try:
+        workshop_ref = db.collection('workshops').where(filter=firestore.FieldFilter('organizer', '==', user_email)).stream()
+        workshops = [workshop for workshop in workshop_ref]
+
+        if not workshops:
+            click.echo("⚠️ No workshops found.")
+            main_menu()
+            return
+        
+        for num, workshop in enumerate(workshops, start=1):
+            workshops_data = workshop.to_dict()
+            title = workshops_data.get('Title', 'Untitled Workshop')
+            click.echo(f"{num}. {title}")
+            
+        try:
+            choice = int(click.prompt(f"Enter the number of the workshop to update (1 - {len(workshops)})"))
+            if 1 <= choice <= len(workshops):
+                selected_workshop = workshops[choice - 1]
+            else:
+                click.echo("⚠️ Invalid choice.")
+                main_menu()
+                return
+        except ValueError:
+            click.echo("⚠️ Invalid input. Please enter a number.")
+            main_menu()
+            return     
+        
+        workshop_id = selected_workshop.id
+        updates = {}
+        
+        click.echo("Leave blank to keep the current value, by pessing Enter.")
+        new_title = click.prompt("New title", default=selected_workshop.to_dict().get('Title', ''))
+        if new_title:
+            updates['Title'] = new_title
+        
+        new_date = click.prompt("New date (DD/MM/YYYY)", default=selected_workshop.to_dict().get('Date', ''))
+        if new_date:
+            updates['Date'] = new_date
+
+        new_time = click.prompt("New Time (HH:MM)", default=selected_workshop.to_dict().get('Time', ''))
+        if new_time:
+            updates['Time'] = new_time
+        
+        new_location = click.prompt("New location", default=selected_workshop.to_dict().get('location', ''))
+        if new_location:
+            updates['location'] = new_location
+
+        try:
+            db.collection('workshops').document(workshop_id).update(updates)
+            click.echo("✅ Workshop updated successfully.")
+
+        except Exception as e:
+            click.echo(f"⚠️ Error updating workshop: {e}")  
+
+        main_menu()   
+    except Exception as e:
+        click.echo(f"⚠️ Error updating workshop: {e}")
+        main_menu()
 
 def cancel_workshop():
     """Cancel an existing workshop."""
@@ -354,7 +420,7 @@ def cancel_workshop():
                     accepted_mentors = workshop_data.get('accepted_mentors', [])
                     organizer = workshop_data.get('organizer', '')
                         
-                    attendees = list(set([organizer] + accepted_mentors + peers))
+                    attendees = list(set([organizer] + mentors + peers))
                     attendees = [attendee for attendee in attendees if attendee]
 
                     try:
@@ -451,10 +517,10 @@ def cancel_workshop():
             elif choice == 'menu':
                 main_menu()
                 return
-            
-            attendees = list(set([workshop_data.get('organizer')] + workshop_data.get('accepted_mentors', []) + workshop_data.get('peers', [])))
+            for attendee in attendees:
+                click.echo(f"📩 Notification sent to: {attendee}")
             click.echo(f"✅ Workshop '{workshop_data['Title']}' has been canceled.")
-            click.echo(f"📩 Notification sent to: {', '.join(set(attendees))}")
+            main_menu()
 
     except Exception as e:
         click.echo(f"⚠️ Error canceling workshop: {e}")
