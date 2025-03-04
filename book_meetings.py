@@ -5,6 +5,7 @@ from googleapiclient.errors import HttpError
 from availability import available_mentors, available_peers
 from google.cloud import firestore
 from calender import get_calendar
+from notify import *
 import pytz
 
 SAST = pytz.timezone('Africa/Johannesburg')
@@ -223,6 +224,16 @@ def bookings():
                 return
             
             book_session(service, subject, start_hour, end_hour, location, attendees, online_link)
+            meeting_data = {
+                'subject': subject,
+                'date': start_hour.strftime('%d/%m/%Y'),
+                'start_time': start_hour.strftime('%H:%M'),
+                'end_time': end_hour.strftime('%H:%M'),
+                'location': location,
+                'organizer': current_session['email'],
+                'attendees': attendees
+            }
+            send_meeting_notification(meeting_data)
             main_menu()
             return
         
@@ -328,5 +339,15 @@ def bookings():
 
         attendees = [chosen_person['email']]
         book_session(service, subject, start_hour, end_hour, location, attendees, online_link)
+        meeting_data = {
+            'subject': subject,
+            'date': start_hour.strftime('%d/%m/%Y'),
+            'start_time': start_hour.strftime('%H:%M'),
+            'end_time': end_hour.strftime('%H:%M'),
+            'location': location,
+            'organizer': current_session['email'],
+            'attendees': attendees
+        }
+        send_meeting_notification(meeting_data)
         main_menu()
         return

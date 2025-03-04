@@ -412,7 +412,6 @@ def cancel_workshop():
             click.echo('\n--- Upcoming Workshops: ---')
             for num, workshop in enumerate(workshop_page, start=1):
                 try:
-                    # workshop_data = workshop.to_dict()
                     title = workshop_data.get('Title', 'Untitled Workshop')
                     date = workshop_data.get('Date', 'Unknown Date')
                     start_time = workshop_data.get('start_time', 'Unknown Start Time')
@@ -424,7 +423,7 @@ def cancel_workshop():
                     accepted_mentors = workshop_data.get('accepted_mentors', [])
                     organizer = workshop_data.get('organizer', '')
                         
-                    attendees = list(set([organizer] + mentors + peers))
+                    attendees = list(set([organizer] + mentors + peers + accepted_mentors))
                     attendees = [attendee for attendee in attendees if attendee]
 
                     try:
