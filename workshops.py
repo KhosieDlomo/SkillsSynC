@@ -1,10 +1,11 @@
 import datetime
 import click
-from firebase_auth import db, auth, current_session
+from firebase_auth import db, current_session
 from events import get_calendar
 from google.cloud import firestore
 from googleapiclient.errors import HttpError
 from login import signin, signup
+from notify import send_workshop_notification
 import pytz
 
 SAST = pytz.timezone('Africa/Johannesburg')
@@ -253,6 +254,8 @@ def create_workshop():
         
         db.collection('workshops').add(workshop_data)
         click.echo('✅ Workshop created and all peers added successfully.')
+
+        send_workshop_notification(workshop_data, notification_type="confirmation")
         
     except HttpError as error:
         click.echo(f"⚠️ An error occured while creating event: {error}")
@@ -340,6 +343,10 @@ def update_workshop():
         try:
             db.collection('workshops').document(workshop_id).update(updates)
             click.echo("✅ Workshop updated successfully.")
+
+            updated_workshop = db.collection('workshops').document(workshop_id).get().to_dict()
+
+            send_workshop_notification(updated_workshop, notification_type="update") 
 
         except Exception as e:
             click.echo(f"⚠️ Error updating workshop: {e}")  
@@ -523,6 +530,8 @@ def cancel_workshop():
             for attendee in attendees:
                 click.echo(f"📩 Notification sent to: {attendee}")
             click.echo(f"✅ Workshop '{workshop_data['Title']}' has been canceled.")
+
+            send_workshop_notification(workshop_data, notification_type="cancellation")
             main_menu()
 
     except Exception as e:
