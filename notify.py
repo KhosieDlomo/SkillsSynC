@@ -27,9 +27,18 @@ def send_email(subject, body, to_email):
     except Exception as e:
         print(f"Failed to send email: {e}")
 
-def send_meeting_notification(meeting_data, reminder=False):
+def send_meeting_notification(meeting_data, notification_type="confirmation"):
     '''Sending a meeting confirmation or reminder email to all attendees'''
-    subject = "Meeting Confirmation" if not reminder else "Meeting Reminder"
+
+    if notification_type == "confirmation":
+        subject = "Meeting Confirmation"
+    elif notification_type == "update":
+        subject = "Meeting Update"
+    elif notification_type == "cancellation":
+        subject = "Meeting Cancellation"
+    else:
+        subject = "Meeting Notification"
+
     body = f"""
     Subject: {meeting_data['subject']}
     Date: {meeting_data['date']}
@@ -38,9 +47,11 @@ def send_meeting_notification(meeting_data, reminder=False):
     Organizer: {meeting_data['organizer']}
     Attendees: {', '.join(meeting_data['attendees'])}
     """
-    if reminder:
-        body = "Reminder: " + body
-
+    if notification_type == "update":
+        body = "Update: " + body
+    elif notification_type == "cancellation":
+        body = "Cancellation: " + body
+        
     for attendee in meeting_data['attendees']:
         send_email(subject, body, attendee)
 
