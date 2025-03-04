@@ -3,6 +3,7 @@ import click
 from firebase_auth import db, current_session
 from calender import get_calendar
 from google.cloud import firestore
+from notify import send_meeting_notification
 
 @click.command()
 def view_booking():
@@ -173,6 +174,9 @@ def cancel_booking():
                 main_menu()
                 return
             click.echo("✅ Booking successfully canceled.")
+
+            meeting_data = selected_booking.to_dict()
+            send_meeting_notification(meeting_data, reminder=False) 
     
     except Exception as e:
         click.echo(f"⚠️ Error canceling booking: {e}")
