@@ -319,7 +319,7 @@ def bookings():
                     main_menu()
                     return
                 for i, peer in enumerate(peers):
-                    click.echo(f"{i + 1}: Name: {peer['name']}, Email: {peer['email']}, Expertise: {peer['expertise']}, Available:{peer['available_dats']}, Time:{peer['available_time_start']}-{peer['available_time_end']}")
+                    click.echo(f"{i + 1}: Name: {peer['name']}, Email: {peer['email']}, Expertise: {peer['expertise']}, Available:{peer['available_days']}, Time:{peer['available_time_start']}-{peer['available_time_end']}")
                 
                 while True:
                     try:

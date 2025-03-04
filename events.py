@@ -24,7 +24,7 @@ def view_booking():
             requested_bookings_ref = db.collection('meetings').where(filter=firestore.FieldFilter('organizer', '==', email))
             requested_bookings = list(requested_bookings_ref.stream())
 
-            booking_ref = db.collection('meetings').where(filter=firestore.FieldFilter('attendees', 'array_contains', email))
+            booking_ref = db.collection('meetings').where(filter=firestore.FieldFilter('attendees', 'array_contains', email)).where(filter=firestore.FieldFilter('session_type', 'in', ['group', 'one-on-one']))
 
             total_booking = booking_ref.count().get()[0][0].value
             total_pages = (total_booking + per_page - 1) // per_page 
@@ -42,6 +42,7 @@ def view_booking():
             click.echo(f'\n--- Your Bookings (Page {page_num} of {total_pages}) ---')
             for num, booking in enumerate(bookings, start=1):
                 data = booking.to_dict()
+                session_type = data.get('session_type', 'group')
                 subject = data.get('subject', 'No Subject')
                 date = data.get('date', 'Unknown Date')
                 start_time = data.get('start_time', 'Unknown Start Time')

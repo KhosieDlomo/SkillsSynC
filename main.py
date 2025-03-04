@@ -22,7 +22,7 @@ def main_menu():
                 click.echo("6. Cancel Workshops")
                 click.echo("7. Submit Feedback")
                 click.echo("8. View Feedback")
-                click.echo("9. Serach Mentors/Peers")
+                click.echo("9. Search Mentors/Peers")
 
                 click.echo("#. Signout")
                 click.echo("*. Exit")

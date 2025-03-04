@@ -173,8 +173,8 @@ def create_workshop():
         main_menu()
         return
     
-    time_min = start_hour.isoformat() + 'Z'
-    time_max = end_hour.isoformat() + 'Z'
+    time_min = start_hour.isoformat()
+    time_max = end_hour.isoformat()
     try:
         event_result = service.events().list( calendarId='primary', timeMin=time_min, timeMax=time_max, singleEvents=True).execute()
         events = event_result.get('items', [])
