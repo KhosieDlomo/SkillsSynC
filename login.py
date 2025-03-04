@@ -62,20 +62,20 @@ def signin():
 @click.command()
 def signup():
     """Hello, Join us by signing up"""
-    name = click.prompt("Enter your Full Name: ")
-    email = click.prompt("Enter your email: ")
-    role = click.prompt('Enter your role (Mentor/Peer): ').lower()
+    name = click.prompt("Enter your Full Name ")
+    email = click.prompt("Enter your email ")
+    role = click.prompt('Enter your role (Mentor/Peer) ').lower()
     while role not in ['mentor', 'peer']:
         click.echo('Invalid role. Please enter "Mentor" or "Peer".')
-        role = click.prompt('Enter your role (Mentor/Peer): ').lower()
+        role = click.prompt('Enter your role (Mentor/Peer) ').lower()
     
     if role == 'mentor':
-        expertise = click.prompt('Enter your expertise, e.g ("Frontend Developer", "Backend Developer", "Fullstack Developer"): ').title()
+        expertise = click.prompt('Enter your expertise, e.g ("Frontend Developer", "Backend Developer", "Fullstack Developer") ').title()
         languages = click.prompt('Enter your expertise languages, separated by commas (e.g., Python, React, Java, etc): ').capitalize()
        
     elif role == 'peer':
-        expertise = click.prompt('Enter your area of interest or expertise (e.g., Frontend Developer, Backend Developer, or Fullstack Developer): ').title()
-        languages = click.prompt('Enter your area of interest or expertise language, seperated by commas (e.g., Python, Java, Nextjs, etc): ').capitalize()
+        expertise = click.prompt('Enter your area of interest or expertise (e.g., Frontend Developer, Backend Developer, or Fullstack Developer) ').title()
+        languages = click.prompt('Enter your area of interest or expertise language, seperated by commas (e.g., Python, Java, Nextjs, etc) ').capitalize()
     
     expertise_languages = []
     for lang in languages.split(','):

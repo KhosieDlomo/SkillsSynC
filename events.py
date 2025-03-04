@@ -176,7 +176,10 @@ def cancel_booking():
             click.echo("✅ Booking successfully canceled.")
 
             meeting_data = selected_booking.to_dict()
-            send_meeting_notification(meeting_data, reminder=False) 
+            try:
+                send_meeting_notification(meeting_data, notification_type='cancellation') 
+            except Exception as e:
+                click.echo(f"⚠️ Failed to send cancellation notification: {e}")
     
     except Exception as e:
         click.echo(f"⚠️ Error canceling booking: {e}")
