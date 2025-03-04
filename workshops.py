@@ -211,14 +211,14 @@ def create_workshop():
     #Mentors
     for emails in mentors_email:
         if emails != user_email:
-            approval_mentor.append(email)
+            approval_mentor.append(emails)
             attendees.append({'email': emails.strip(), 'optional': True})
 
     #peers
     for email in peers_email:
-        attendees.append({'email': email.strip(), 'optional': False})
+        attendees.append({'email': emails.strip(), 'optional': False})
    
-    event = {'title': title,
+    event = {'summary': title,
              'description': description,
              'location': location,
              'start': {'dateTime': start_hour.isoformat(), 'timeZone': 'Africa/Johannesburg'},
