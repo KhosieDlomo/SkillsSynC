@@ -128,184 +128,205 @@ def bookings():
         click.echo(message)
         return
     
-    click.echo(f"Fetching bookings for {current_session['email']}...")
+    action = click.prompt('Do you want to (B)ook a new session or (U)pdate an existing booking?', type=click.Choice(['B', 'U', 'b', 'u'])).lower()
     
-    user_meeting = click.prompt('Want a (G)-for-Group session or a (O)-for-One-on-One session?', type=click.Choice(['G','O','g','o'])).lower()
-    group_session = user_meeting == 'g'
-    if group_session:
-        click.echo("You've selected a group session")
-        expertise = click.prompt('Enter desired expertise (optional)', default="", show_default=False).strip()
-        language = click.prompt("Enter desired language (optional)", default="", show_default=False).strip()
+    if action == 'u':
+        click.echo(f"Fetching bookings for {current_session['email']}...")
+        subject = click.prompt("Enter the booking subject you want to update")
+        new_date = click.prompt('Enter the new event date (DD/MM/YYYY)')
+        new_start_time = click.prompt('Enter the new event start time (HH:MM)')
+        new_end_time = click.prompt('Enter the new event end time (HH:MM)')
 
-        mentors = available_mentors(expertise=expertise, language=language)
-        peers = available_peers(expertise=expertise, language=language)
+        try:
+            new_start_hour = datetime.datetime.strptime(f"{new_date} {new_start_time}", "%d/%m/%Y %H:%M")
+            new_end_hour = datetime.datetime.strptime(f"{new_date} {new_end_time}", "%d/%m/%Y %H:%M")
+        except ValueError:
+            click.echo("Invalid date or time format. Please use DD/MM/YYYY and HH:MM.")
+            main_menu()
+            return
 
-        combined_lst = mentors + peers
-        if not combined_lst:
-            click.echo("No mentors or peer found.")
+        update_booking(db, subject, new_start_hour, new_end_hour)
+        main_menu()
+        return
+
+    elif action == 'b':
+        
+        user_meeting = click.prompt('Want a (G)-for-Group session or a (O)-for-One-on-One session?', type=click.Choice(['G','O','g','o'])).lower()
+        group_session = user_meeting == 'g'
+        if group_session:
+            click.echo("You've selected a group session")
+            expertise = click.prompt('Enter desired expertise (optional)', default="", show_default=False).strip()
+            language = click.prompt("Enter desired language (optional)", default="", show_default=False).strip()
+
+            mentors = available_mentors(expertise=expertise, language=language)
+            peers = available_peers(expertise=expertise, language=language)
+
+            combined_lst = mentors + peers
+            if not combined_lst:
+                click.echo("No mentors or peer found.")
+                main_menu()
+                return
+            
+            click.echo("\nAvailable Mentors and Peers for the Group session: ")
+            for i, person in enumerate(combined_lst):
+                click.echo(f"{i + 1}: {person['name']},({person['expertise']}, {person['language']}) - {person['email']}")
+                
+            selected_members = []
+            while True:
+                try:
+                    selecting_members = click.prompt("Enter the number of a member to add (or 'done')").lower()
+                    if selecting_members == 'done':
+                        break
+                    member_number = int(selecting_members) - 1
+                    if 0 <= member_number < len(combined_lst):
+                        selected_members.append(combined_lst[member_number])
+                        click.echo(f"Added {combined_lst[member_number]['name']} to the group.")
+                    else:
+                        click.echo("Invalid selection. Please try again.")
+
+                except ValueError:
+                    click.echo("Invalid input. Please enter a number or 'done'.")
+
+            if not selected_members:
+                click.echo("No members selected for group session.")
+                main_menu()
+                return
+            
+            subject = click.prompt('Event subject ')
+            date = click.prompt('Event date(DD/MM/YYYY) ')
+            start_time = click.prompt('Event start time (HH:MM) ')
+            end_time = click.prompt('Event end time (HH:MM) ')
+            location = click.prompt('Event Location (e.g: "Online" or a physical address) ')
+            
+            online_link = None
+            if location == 'online'.lower():
+                online_link = click.prompt("Enter the online meeting link: ")
+            try:
+                start_hour = datetime.datetime.strptime(f"{date} {start_time}", "%d/%m/%Y %H:%M")
+                end_hour = datetime.datetime.strptime(f"{date} {end_time}", "%d/%m/%Y %H:%M")
+            except ValueError:
+                click.echo("Invalid date or time format. Please use DD/MM/YYYY and HH:MM.")
+                main_menu()
+                return
+            
+            if start_hour.weekday() >= 5 or start_hour.hour < 7 or end_hour.hour > 17:
+                click.echo("Error! Meetings are only allowed on weekdays between 07:00 to 17:00.")
+                main_menu()
+                return
+            
+            attendees =[person['email'] for person in selected_members]
+            attendees.append(auth.current_user['email'])
+
+            service = get_calendar()
+            if not service:
+                main_menu()
+                return
+            
+            book_session(service, subject, start_hour, end_hour, location, attendees, online_link)
             main_menu()
             return
         
-        click.echo("\nAvailable Mentors and Peers for the Group session: ")
-        for i, person in enumerate(combined_lst):
-            click.echo(f"{i + 1}: {person['name']},({person['expertise']}, {person['language']}) - {person['email']}")
-            
-        selected_members = []
-        while True:
-            try:
-                selecting_members = click.prompt("Enter the number of a member to add (or 'done')").lower()
-                if selecting_members == 'done':
-                    break
-                member_number = int(selecting_members) - 1
-                if 0 <= member_number < len(combined_lst):
-                    selected_members.append(combined_lst[member_number])
-                    click.echo(f"Added {combined_lst[member_number]['name']} to the group.")
-                else:
-                    click.echo("Invalid selection. Please try again.")
+        else:
+            click.echo('\nFetching available mentors and peers...')
+            mentors = available_mentors()
+            peers = available_peers()
 
-            except ValueError:
-                click.echo("Invalid input. Please enter a number or 'done'.")
+            user_choice = click.prompt("Book with a (M)-for-Mentor or (P)-for-Peer?", type=click.Choice(['M','P','m','p'])).lower()
+            booking_mentor = user_choice == 'm'
 
-        if not selected_members:
-            click.echo("No members selected for group session.")
-            main_menu()
-            return
+            chosen_person = None
+
+            if booking_mentor:
+                click.echo('\nFecthing available mentors...')
+                if not mentors:
+                    click.echo('No available mentors')
+                    main_menu()
+                    return
+                
+                for i, mentor in enumerate(mentors):
+                    click.echo(f"{i + 1}: Name: {mentor['name']}, Email:{mentor['email']}, Expertise: {mentor['expertise']}")
+
+                while True:
+                    try:
+                        select_mentor = int(click.prompt('Select the Mentor(e.g., 1, 2, 3,etc).')) - 1
+                        if 0 <= select_mentor < len(mentors):
+                            chosen_person = mentors[select_mentor]
+                            break
+                        else:
+                            click.echo('Invalid selection!')
+                    except ValueError:
+                            click.echo('Invalid input. Please enter a number(e.g., 1, 2, 3, etc...)')
+
+            else:
+                click.echo('\nFetching available peers...')
+                if not peers:
+                    click.echo('No Available peers at the moment.')
+                    main_menu()
+                    return
+                for i, peer in enumerate(peers):
+                    click.echo(f"{i + 1}: Name: {peer['name']}, Email: {peer['email']}, Expertise: {peer['expertise']}, Available:{peer['available_dats']}, Time:{peer['available_time_start']}-{peer['available_time_end']}")
+                
+                while True:
+                    try:
+                        select_peer = int(click.prompt('Select the Peer(e.g., 1, 2, 3, etc...).')) - 1
+                        if 0 <= select_peer < len(peers):
+                            chosen_person = peers[select_peer]
+                            break
+                        else:
+                            click.echo('Invalid Selection!')
+                    except ValueError:
+                        click.echo('Invalid input. Please enter a number (e.g., 1, 2, 3, etc...).')
+
+        if chosen_person is None:
+                click.echo("Error: No mentor or peer selected.")
+                main_menu()
+                return
         
         subject = click.prompt('Event subject ')
         date = click.prompt('Event date(DD/MM/YYYY) ')
         start_time = click.prompt('Event start time (HH:MM) ')
         end_time = click.prompt('Event end time (HH:MM) ')
         location = click.prompt('Event Location (e.g: "Online" or a physical address) ')
-        
+
         online_link = None
         if location == 'online'.lower():
             online_link = click.prompt("Enter the online meeting link: ")
+
         try:
-            start_hour = datetime.datetime.strptime(f"{date} {start_time}", "%d/%m/%Y %H:%M")
-            end_hour = datetime.datetime.strptime(f"{date} {end_time}", "%d/%m/%Y %H:%M")
+            start_hour = SAST.localize(datetime.datetime.strptime(f'{date} {start_time}', "%d/%m/%Y %H:%M"))
+            end_hour = SAST.localize(datetime.datetime.strptime(f'{date} {end_time}', "%d/%m/%Y %H:%M"))
         except ValueError:
-            click.echo("Invalid date or time format. Please use DD/MM/YYYY and HH:MM.")
+            click.echo('Invalid date or time format. Please use DD/MM/YYYY and HH:MM.')
             main_menu()
             return
-        
+
         if start_hour.weekday() >= 5 or start_hour.hour < 7 or end_hour.hour > 17:
             click.echo("Error! Meetings are only allowed on weekdays between 07:00 to 17:00.")
             main_menu()
             return
         
-        attendees =[person['email'] for person in selected_members]
-        attendees.append(auth.current_user['email'])
-
         service = get_calendar()
         if not service:
             main_menu()
             return
-        
+
+        if not is_mentor_available(service, chosen_person['email'], start_hour, end_hour):
+                click.echo("The selected mentor/peer is not available at the chosen time.")
+                new_start_hour, new_end_hour = find_next_available_slot(service, chosen_person['email'], start_hour, (end_hour - start_hour).seconds // 3600)
+                if new_start_hour and new_end_hour:
+                    click.echo(f"Next available slot: {new_start_hour.strftime('%d/%m/%Y %H:%M')} to {new_end_hour.strftime('%H:%M')}")
+                    reschedule = click.prompt("Would you like to reschedule? (Y/N)", type=click.Choice(['Y', 'N', 'y', 'n'])).lower()
+                    if reschedule == 'y':
+                        start_hour, end_hour = new_start_hour, new_end_hour
+                    else:
+                        main_menu()
+                        return
+                else:
+                    click.echo("No available slots found.")
+                    main_menu()
+                    return
+
+        attendees = [chosen_person['email']]
         book_session(service, subject, start_hour, end_hour, location, attendees, online_link)
         main_menu()
         return
-    
-    else:
-        click.echo('\nFetching available mentors and peers...')
-        mentors = available_mentors()
-        peers = available_peers()
-
-        user_choice = click.prompt("Book with a (M)-for-Mentor or (P)-for-Peer?", type=click.Choice(['M','P','m','p'])).lower()
-        booking_mentor = user_choice == 'm'
-
-        chosen_person = None
-
-        if booking_mentor:
-            click.echo('\nFecthing available mentors...')
-            if not mentors:
-                click.echo('No available mentors')
-                main_menu()
-                return
-            
-            for i, mentor in enumerate(mentors):
-                click.echo(f"{i + 1}: Name: {mentor['name']}, Email:{mentor['email']}, Expertise: {mentor['expertise']}")
-
-            while True:
-                try:
-                    select_mentor = int(click.prompt('Select the Mentor(e.g., 1, 2, 3,etc).')) - 1
-                    if 0 <= select_mentor < len(mentors):
-                        chosen_person = mentors[select_mentor]
-                        break
-                    else:
-                        click.echo('Invalid selection!')
-                except ValueError:
-                        click.echo('Invalid input. Please enter a number(e.g., 1, 2, 3, etc...)')
-
-        else:
-            click.echo('\nFetching available peers...')
-            if not peers:
-                click.echo('No Available peers at the moment.')
-                main_menu()
-                return
-            for i, peer in enumerate(peers):
-                click.echo(f"{i + 1}: Name: {peer['name']}, Email: {peer['email']}, Expertise: {peer['expertise']}, Available:{peer['available_dats']}, Time:{peer['available_time_start']}-{peer['available_time_end']}")
-            
-            while True:
-                try:
-                    select_peer = int(click.prompt('Select the Peer(e.g., 1, 2, 3, etc...).')) - 1
-                    if 0 <= select_peer < len(peers):
-                        chosen_person = peers[select_peer]
-                        break
-                    else:
-                        click.echo('Invalid Selection!')
-                except ValueError:
-                    click.echo('Invalid input. Please enter a number (e.g., 1, 2, 3, etc...).')
-
-    if chosen_person is None:
-            click.echo("Error: No mentor or peer selected.")
-            main_menu()
-            return
-    
-    subject = click.prompt('Event subject ')
-    date = click.prompt('Event date(DD/MM/YYYY) ')
-    start_time = click.prompt('Event start time (HH:MM) ')
-    end_time = click.prompt('Event end time (HH:MM) ')
-    location = click.prompt('Event Location (e.g: "Online" or a physical address) ')
-
-    online_link = None
-    if location == 'online'.lower():
-        online_link = click.prompt("Enter the online meeting link: ")
-
-    try:
-        start_hour = SAST.localize(datetime.datetime.strptime(f'{date} {start_time}', "%d/%m/%Y %H:%M"))
-        end_hour = SAST.localize(datetime.datetime.strptime(f'{date} {end_time}', "%d/%m/%Y %H:%M"))
-    except ValueError:
-        click.echo('Invalid date or time format. Please use DD/MM/YYYY and HH:MM.')
-        main_menu()
-        return
-
-    if start_hour.weekday() >= 5 or start_hour.hour < 7 or end_hour.hour > 17:
-        click.echo("Error! Meetings are only allowed on weekdays between 07:00 to 17:00.")
-        main_menu()
-        return
-    
-    service = get_calendar()
-    if not service:
-        main_menu()
-        return
-
-    if not is_mentor_available(service, chosen_person['email'], start_hour, end_hour):
-            click.echo("The selected mentor/peer is not available at the chosen time.")
-            new_start_hour, new_end_hour = find_next_available_slot(service, chosen_person['email'], start_hour, (end_hour - start_hour).seconds // 3600)
-            if new_start_hour and new_end_hour:
-                click.echo(f"Next available slot: {new_start_hour.strftime('%d/%m/%Y %H:%M')} to {new_end_hour.strftime('%H:%M')}")
-                reschedule = click.prompt("Would you like to reschedule? (Y/N)", type=click.Choice(['Y', 'N', 'y', 'n'])).lower()
-                if reschedule == 'y':
-                    start_hour, end_hour = new_start_hour, new_end_hour
-                else:
-                    main_menu()
-                    return
-            else:
-                click.echo("No available slots found.")
-                main_menu()
-                return
-
-    attendees = [chosen_person['email']]
-    book_session(service, subject, start_hour, end_hour, location, attendees, online_link)
-    main_menu()
-    return

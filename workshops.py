@@ -204,10 +204,13 @@ def create_workshop():
         main_menu()
         return
     
+    approval_mentor = [user_email]
+    
     attendees = []
     #Mentors
     for emails in mentors_email:
         if emails != user_email:
+            approval_mentor.append(email)
             attendees.append({'email': emails.strip(), 'optional': True})
 
     #peers
@@ -244,9 +247,10 @@ def create_workshop():
             'google_event_id': event_result.get('id'),
             'online_link': online_link,
             'organizer' : user_email,
-            'accepted_mentors': [user_email],
+            'approval_mentors': approval_mentor,
             'attendees': list(mentors_email.union(peers_email))
         }
+        
         db.collection('workshops').add(workshop_data)
         click.echo('✅ Workshop created and all peers added successfully.')
         
