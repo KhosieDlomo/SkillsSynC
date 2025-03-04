@@ -70,7 +70,14 @@ def update_booking(db, google_event_id, new_start_hour, new_end_hour):
             })
 
             click.echo(f"Booking updated successfully: {updated_event.get('htmlLink')}")
+            updated_meeting_data = db.collection('meetings').document(meeting_id).get().to_dict()
+
+            try:
+                send_meeting_notification(updated_meeting_data, notification_type='update')
+            except Exception as e:
+                click.echo(f"⚠️ Failed to send update notification: {e}")
             return
+        
         click.echo("No matching bookings found.")
 
     except Exception as e:
@@ -110,10 +117,34 @@ def book_session(service, subject, start_hour, end_hour, location, attendees, on
             'online_link': online_link
         })
         click.echo(f"Event created successfully: {event_result.get('htmlLink')}")
+
+        meeting_data = {
+            'subject': subject,
+            'date': start_hour.strftime('%d/%m/%Y'),
+            'start_time': start_hour.strftime('%H:%M'),
+            'end_time': end_hour.strftime('%H:%M'),
+            'location': location,
+            'organizer': current_session['email'],
+            'attendees': attendees
+        }
+
+        try:
+            send_meeting_notification(meeting_data, notification_type="confirmation")
+        except Exception as e:
+            click.echo(f"⚠️ Failed to send confirmation notification: {e}")
+
     except HttpError as error:
         click.echo(f"An error occurred: {error}")
     except Exception as e:
         click.echo(f"An error occurred while creating the event: {e}")
+
+def send_booking_notification(meeting_data):
+    """Send email notifications to all attendees."""
+    try:
+        send_meeting_notification(meeting_data)
+        click.echo("Email notifications sent successfully.")
+    except Exception as e:
+        click.echo(f"Failed to send email notifications: {e}")
 
 @click.command()
 def bookings():
@@ -233,7 +264,20 @@ def bookings():
                 'organizer': current_session['email'],
                 'attendees': attendees
             }
-            send_meeting_notification(meeting_data)
+
+            for attendee in meeting_data['attendees']:
+                send_email(
+                    subject=f"Meeting Confirmation: {meeting_data['subject']}",
+                    body=f"""
+                    Subject: {meeting_data['subject']}
+                    Date: {meeting_data['date']}
+                    Time: {meeting_data['start_time']} - {meeting_data['end_time']}
+                    Location: {meeting_data['location']}
+                    Organizer: {meeting_data['organizer']}
+                    """,
+                    to_email=attendee
+                )
+            send_booking_notification(meeting_data)
             main_menu()
             return
         
@@ -348,6 +392,19 @@ def bookings():
             'organizer': current_session['email'],
             'attendees': attendees
         }
-        send_meeting_notification(meeting_data)
+
+        for attendee in meeting_data['attendees']:
+                send_email(
+                    subject=f"Meeting Confirmation: {meeting_data['subject']}",
+                    body=f"""
+                    Subject: {meeting_data['subject']}
+                    Date: {meeting_data['date']}
+                    Time: {meeting_data['start_time']} - {meeting_data['end_time']}
+                    Location: {meeting_data['location']}
+                    Organizer: {meeting_data['organizer']}
+                    """,
+                    to_email=attendee
+                )
+        send_booking_notification(meeting_data)
         main_menu()
         return
