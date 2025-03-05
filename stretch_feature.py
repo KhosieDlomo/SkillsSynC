@@ -1,5 +1,6 @@
 import click, datetime
 from firebase_auth import db, current_session
+from google.cloud import firestore
 
 @click.command()
 def submit_feedback():
@@ -82,32 +83,54 @@ def search_mentors_peers():
     if not current_session['logged_in']:
         return
     
-    expertise = click.prompt("Enter desired expertise (optional)", default="", show_default=False)
-    availability = click.prompt("Enter desired availability (e.g., 'Monday', 'Tuesday') (optional)", default="", show_default=False)
+    expertise = click.prompt("Enter desired expertise (optional)", default="").strip()
+    availability = click.prompt("Enter desired availability (e.g., 'Monday', 'Tuesday') (optional)", default="").strip()
 
     try:
-        mentors_query = db.collection('users').where('role', '==', 'mentor')
-        peers_query = db.collection('users').where('role', '==', 'peer')
+        mentors_query = db.collection('users').where(filter=firestore.FieldFilter('role', '==', 'mentor'))
+        peers_query = db.collection('users').where(filter=firestore.FieldFilter('role', '==', 'peer'))
 
         if expertise:
-            mentors_query = mentors_query.where('expertise', '==', expertise)
-            peers_query = peers_query.where('expertise', '==', expertise)
+            mentors_query = mentors_query.where(filter=firestore.FieldFilter('expertise', '==', expertise))
+            peers_query = peers_query.where(filter=firestore.FieldFilter('expertise', '==', expertise))
         
         if availability:
-            mentors_query = mentors_query.where('available_days', 'array_contains', availability)
-            peers_query = peers_query.where('available_days', 'array_contains', availability)
+            mentors_query = mentors_query.where(filter=firestore.FieldFilter('available_days', 'array_contains', availability))
+            peers_query = peers_query.where(filter=firestore.FieldFilter('available_days', 'array_contains', availability))
 
-        mentors = [doc.to_dict() for doc in mentors_query.stream()]
-        peers = [doc.to_dict() for doc in peers_query.stream()]
+        mentors = mentors_query.stream()
+        peers = peers_query.stream()
 
         click.echo("\n📋 Matching Mentors:")
+        mentor_found = False
         for mentor in mentors:
-            click.echo(f"Name: {mentor['name']}, Email: {mentor['email']}, Expertise: {mentor['expertise']}")
+            name = mentor.to_dict().get('name', 'Unknown')
+            email = mentor.to_dict().get('email', 'Unknown')
+            mentor_expertise = mentor.to_dict().get('expertise', 'Unknown')
+            mentor_availability = mentor.to_dict().get('availability', 'Unknown')
+            if availability and availability.lower() not in mentor_availability.lower():
+                continue
+            click.echo(f"Name: {name}, Email: {email}, Expertise: {mentor_expertise}")
+            mentor_found = True
+        if not mentor_found:
+            click.echo("No matching mentors found.")
 
         click.echo("\n📋 Matching Peers:")
+        peer_found = False
         for peer in peers:
-            click.echo(f"Name: {peer['name']}, Email: {peer['email']}, Expertise: {peer['expertise']}")
+            peer_data = peer.to_dict()
+            name = peer_data.get('name', 'Unknown')
+            email = peer_data.get('email', 'Unknown')
+            peer_expertise = peer_data.get('expertise', 'Unknown')
+            peer_availability = peer_data.get('availability', 'Unknown')
+            if availability and availability.lower() not in peer_availability.lower():
+                continue
+            
+            click.echo(f"Name: {name}, Email: {email}, Expertise: {peer_expertise}")
+            peer_found = True
 
+        if not peer_found:
+            click.echo("No matching peers found.")
     except Exception as e:
         click.echo(f"⚠️ Error searching mentors/peers: {e}")
     
