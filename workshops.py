@@ -19,51 +19,58 @@ def view_workshop():
     if not current_session['logged_in']:
         return
     
+    email = current_session['email']
+    click.echo(f"📩 Fetching workshops for {email}")
+
     try:
         per_page = 5
         page_num = 1
 
         while True:
-            workshops_ref = db.collection('workshops').where('canceled', '==', False).stream()
-            all_workshop = [workshop.to_dict() for workshop in workshops_ref]
-            all_workshop.sort(key=lambda i: datetime.datetime.strptime(i['Date'], '%d/%m/%Y'))
+            requested_workshops_ref = db.collection('workshops').where(filter=firestore.FieldFilter('organizer', '==', email))
+            requested_workshops = list(requested_workshops_ref.stream())
+
+            workshops_ref = db.collection('workshops').where(filter=firestore.FieldFilter('attendees', 'array_contains', email))
+            workshops = list(workshops_ref.stream())
+
+            all_workshop = requested_workshops + workshops
+            unique_workshops = {workshop.id: workshop for workshop in all_workshop}.values()
             
-                    
-            if not all_workshop:
-                click.echo('⚠️ No upcoming workshops found.')
+            if not unique_workshops:
+                click.echo("⚠️ No workshops found for this email address.")
                 main_menu()
                 return
             
-            total_pages = (len(all_workshop) + per_page - 1) // per_page
-
+            total_pages = (len(unique_workshops) + per_page - 1) // per_page
             start_page = (page_num - 1) * per_page
             end_page = start_page + per_page
-            workshop_page = all_workshop[start_page:end_page]
+            workshop_page = list(unique_workshops)[start_page:end_page]
             
+            # workshops = list(workshops_ref.offset((page_num - 1) * per_page).limit(per_page).stream())
+                        
             click.echo(f'📩 ---Upcoming Workshops (Page {page_num} of {total_pages})---')
             
             for num, workshop in enumerate(workshop_page, start=1):
                 try:
-                    title = workshop.get('Title', 'Untitled Workshop')
-                    date = workshop.get('Date', 'Unknown Date')
-                    start_time = workshop.get('start_time', 'Unknown Start Time')
-                    end_time = workshop.get('end_time', 'Unknown End Time')
-                    location = workshop.get('location', 'Unknown Location')
-                    mentors = workshop.get('mentors', [])
-                    peers = workshop.get('peers', [])
-                    online_link = workshop.get('online_link', '')
-                    accepted_mentors = workshop.get('accepted_mentors', [])
-                    organizer = workshop.get('organizer', '')
+                    title = workshop.to_dict().get('Title', 'Untitled Workshop')
+                    date = workshop.to_dict().get('Date', 'Unknown Date')
+                    start_time = workshop.to_dict().get('start_time', 'Unknown Start Time')
+                    end_time = workshop.to_dict().get('end_time', 'Unknown End Time')
+                    location = workshop.to_dict().get('location', 'Unknown Location')
+                    mentors = workshop.to_dict().get('mentors', [])
+                    peers = workshop.to_dict().get('peers', [])
+                    online_link = workshop.to_dict().get('online_link', '')
+                    accepted_mentors = workshop.to_dict().get('accepted_mentors', [])
+                    organizer = workshop.to_dict().get('organizer', '')
 
                     if isinstance(mentors, str):
                         mentors = [mentors]
                     if isinstance(peers, str):
                         peers = [peers]
+                    if isinstance(accepted_mentors, str):
+                        accepted_mentors = [accepted_mentors]
 
-                    if organizer and organizer not in mentors:
-                        mentors.append(organizer)
-
-                    attendees = list(set([organizer] + accepted_mentors + peers))
+                    attendees = list(set([organizer] + accepted_mentors + mentors + peers))
                     attendees = [attendee for attendee in attendees if attendee]
 
                     try:
@@ -393,11 +400,15 @@ def cancel_workshop():
             main_menu()
             return
         
-        current_time = datetime.datetime.now()
+        current_time = datetime.datetime.now(SAST)
+
         upcoming_workshops = []
         for workshop in workshops:
             workshop_data = workshop.to_dict()
             end_time = datetime.datetime.fromisoformat(workshop_data.get('end_time', ''))
+
+            if end_time.tzinfo is None:
+                end_time = SAST.localize(end_time)
 
             if end_time > current_time:
                 upcoming_workshops.append(workshop)
@@ -419,16 +430,16 @@ def cancel_workshop():
             click.echo('\n--- Upcoming Workshops: ---')
             for num, workshop in enumerate(workshop_page, start=1):
                 try:
-                    title = workshop_data.get('Title', 'Untitled Workshop')
-                    date = workshop_data.get('Date', 'Unknown Date')
-                    start_time = workshop_data.get('start_time', 'Unknown Start Time')
-                    end_time = workshop_data.get('end_time', 'Unknown End Time')
-                    location = workshop_data.get('location', 'Unknown Location')
-                    mentors = workshop_data.get('mentors', [])
-                    peers = workshop_data.get('peers', [])
-                    online_link = workshop_data.get('online_link', '')
-                    accepted_mentors = workshop_data.get('accepted_mentors', [])
-                    organizer = workshop_data.get('organizer', '')
+                    title = workshop.to_dict().get('Title', 'Untitled Workshop')
+                    date = workshop.to_dict().get('Date', 'Unknown Date')
+                    start_time = workshop.to_dict().get('start_time', 'Unknown Start Time')
+                    end_time = workshop.to_dict().get('end_time', 'Unknown End Time')
+                    location = workshop.to_dict().get('location', 'Unknown Location')
+                    mentors = workshop.to_dict().get('mentors', [])
+                    peers = workshop.to_dict().get('peers', [])
+                    online_link = workshop.to_dict().get('online_link', '')
+                    accepted_mentors = workshop.to_dict().get('accepted_mentors', [])
+                    organizer = workshop.to_dict().get('organizer', '')
                         
                     attendees = list(set([organizer] + mentors + peers + accepted_mentors))
                     attendees = [attendee for attendee in attendees if attendee]
