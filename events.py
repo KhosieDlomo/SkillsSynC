@@ -23,14 +23,10 @@ def view_booking():
         while True:
             requested_bookings_ref = db.collection('meetings').where(filter=firestore.FieldFilter('organizer', '==', email))
             requested_bookings = list(requested_bookings_ref.stream())
+           
+            booking_ref = db.collection('meetings').where(filter=firestore.FieldFilter('attendees', 'array_contains', email))
+            bookings = list(booking_ref.stream())
 
-            booking_ref = db.collection('meetings').where(filter=firestore.FieldFilter('attendees', 'array_contains', email)).where(filter=firestore.FieldFilter('session_type', 'in', ['group', 'one-on-one']))
-
-            total_booking = booking_ref.count().get()[0][0].value
-            total_pages = (total_booking + per_page - 1) // per_page 
-
-            bookings = list(booking_ref.offset((page_num - 1) * per_page).limit(per_page).stream()
-                            )
             all_bookings = requested_bookings + bookings
             unique_bookings = {booking.id: booking for booking in all_bookings}.values()
 
@@ -38,11 +34,16 @@ def view_booking():
                 click.echo("⚠️ No bookings found for this email address.")
                 main_menu()
                 return
+            
+            total_pages = (len(unique_bookings) + per_page - 1) // per_page 
+            start_page = (page_num - 1) * per_page
+            end_page = start_page + per_page
+            booking_page = list(unique_bookings)[start_page:end_page]
 
             click.echo(f'\n--- Your Bookings (Page {page_num} of {total_pages}) ---')
-            for num, booking in enumerate(bookings, start=1):
+
+            for num, booking in enumerate(booking_page, start=1):
                 data = booking.to_dict()
-                session_type = data.get('session_type', 'group')
                 subject = data.get('subject', 'No Subject')
                 date = data.get('date', 'Unknown Date')
                 start_time = data.get('start_time', 'Unknown Start Time')
@@ -66,7 +67,7 @@ def view_booking():
                     formatted_end_time = end_time
                     formatted_date = date
 
-                click.echo(f"\n📋 Booking: {num}")
+                click.echo(f"\n📋 Booking: {num} ")
                 click.echo(f"📝 Subject: {subject}")
                 click.echo(f"📅 Date: {formatted_date}")
                 click.echo(f"🕒 Time: {formatted_start_time} - {formatted_end_time}")
@@ -76,6 +77,23 @@ def view_booking():
                 click.echo(f"🔍 Status: {status}")
                 click.echo(f"🔗 Event ID: {google_event_id}")
                 click.echo("-" * 80)  
+            
+            if page_num > 1:
+                click.echo("Enter 'p' for previous page")
+            if page_num < total_pages:
+                click.echo("Enter 'n' for next page")
+            click.echo("Enter 'menu' to return to the main menu")
+
+            choice = click.prompt("Enter your choice").lower()
+            if choice == 'p' and page_num > 1:
+                page_num -= 1
+            elif choice == 'n' and page_num < total_pages:
+                page_num += 1
+            elif choice == 'menu':
+                main_menu()
+                return
+            else:
+                click.echo("⚠️ Invalid choice. Please try again.")
                 
             main_menu()
                     
@@ -95,93 +113,126 @@ def cancel_booking():
     click.echo(f"Fetching all bookings...")
 
     try:
-        booking_ref = db.collection('meetings').where(filter=firestore.FieldFilter('attendees', 'array_contains', email))
-        bookings = list(booking_ref.stream())
+        per_page = 5
+        page_num = 1
 
-        if not bookings:
-            click.echo("⚠️ No bookings found.")
-            main_menu()
-            return
-        click.echo("Your Bookings:")
-        for num, booking in enumerate(bookings):
-            data = booking.to_dict()
-            subject = data.get('subject', 'No Subject')
-            date = data.get('date', 'Unknown Date')
-            start_time = data.get('start_time', 'Unknown Start Time')
-            end_time = data.get('end_time', 'Unknown End Time')
-            organizer = data.get('organizer', 'Unknown Organizer')
-            attendees = data.get('attendees', [])
-            status = data.get('status', 'pending')
-            location = data.get('location', 'Unknown Location')
-            google_event_id = data.get('google_event_id', 'No Event ID')
+        while True:
+            requested_bookings_ref = db.collection('meetings').where(filter=firestore.FieldFilter('organizer', '==', email))
+            requested_bookings = list(requested_bookings_ref.stream())
+
+            booking_ref = db.collection('meetings').where(filter=firestore.FieldFilter('attendees', 'array_contains', email))
+            bookings = list(booking_ref.stream())
+
+            all_bookings = requested_bookings + bookings
+            unique_bookings = {booking.id: booking for booking in all_bookings}.values()        
+
+            if not unique_bookings:
+                click.echo("⚠️ No bookings found.")
+                main_menu()
+                return
             
-            try:
-                from datetime import datetime
-                start_time_obj = datetime.fromisoformat(start_time)
-                end_time_obj = datetime.fromisoformat(end_time)
-                formatted_start_time = start_time_obj.strftime('%I:%M %p')
-                formatted_end_time = end_time_obj.strftime('%I:%M %p')
-                formatted_date = start_time_obj.strftime('%A, %d %B %Y')
+            total_pages = (len(unique_bookings) + per_page - 1) // per_page
+            start_page = (page_num - 1) * per_page
+            end_page = start_page + per_page
+            booking_page = list(unique_bookings)[start_page:end_page]
+
+            
+            click.echo("Your Bookings:")
+            for num, booking in enumerate(booking_page, start=1):
+                data = booking.to_dict()
+                subject = data.get('subject', 'No Subject')
+                date = data.get('date', 'Unknown Date')
+                start_time = data.get('start_time', 'Unknown Start Time')
+                end_time = data.get('end_time', 'Unknown End Time')
+                organizer = data.get('organizer', 'Unknown Organizer')
+                attendees = data.get('attendees', [])
+                status = data.get('status', 'pending')
+                location = data.get('location', 'Unknown Location')
+                google_event_id = data.get('google_event_id', 'No Event ID')
                 
-            except ValueError:
-                formatted_start_time = start_time
-                formatted_end_time = end_time
-                formatted_date = date
-
-            click.echo(f"\n📋 Booking {num}")
-            click.echo(f"📝 Subject: {subject}")
-            click.echo(f"📅 Date: {formatted_date}")
-            click.echo(f"🕒 Time: {formatted_start_time} - {formatted_end_time}")
-            click.echo(f"📌 Location: {location}")
-            click.echo(f"👤 Organizer: {organizer}")
-            click.echo(f"👥 Attendees: {', '.join(set(attendees))}")
-            click.echo(f"🔍 Status: {status}")
-            click.echo(f"🔗 Event ID: {google_event_id}")
-            click.echo("-" * 80)
-
-            while True:
                 try:
-                    choice = int(click.prompt(f"Enter the number of the booking to cancel (1 - {len(bookings)}), or 0 to cancel: "))
-                    if 0 <= choice <= len(bookings):
-                        break
+                    from datetime import datetime
+                    start_time_obj = datetime.fromisoformat(start_time)
+                    end_time_obj = datetime.fromisoformat(end_time)
+                    formatted_start_time = start_time_obj.strftime('%I:%M %p')
+                    formatted_end_time = end_time_obj.strftime('%I:%M %p')
+                    formatted_date = start_time_obj.strftime('%A, %d %B %Y')
+                    
+                except ValueError:
+                    formatted_start_time = start_time
+                    formatted_end_time = end_time
+                    formatted_date = date
+
+                click.echo(f"\n📋 Booking {num}")
+                click.echo(f"📝 Subject: {subject}")
+                click.echo(f"📅 Date: {formatted_date}")
+                click.echo(f"🕒 Time: {formatted_start_time} - {formatted_end_time}")
+                click.echo(f"📌 Location: {location}")
+                click.echo(f"👤 Organizer: {organizer}")
+                click.echo(f"👥 Attendees: {', '.join(set(attendees))}")
+                click.echo(f"🔍 Status: {status}")
+                click.echo(f"🔗 Event ID: {google_event_id}")
+                click.echo("-" * 80)
+
+            if page_num > 1:
+                click.echo("Enter 'p' for previous page")
+            if page_num < total_pages:
+                click.echo("Enter 'n' for next page")
+            click.echo("Enter 'menu' to return to the main menu")
+
+            choice = click.prompt("Enter your choice").lower()
+            if choice == 'p' and page_num > 1:
+                page_num -= 1
+            elif choice == 'n' and page_num < total_pages:
+                page_num += 1
+            elif choice == 'menu':
+                main_menu()
+                return
+            else:
+                try:
+                    choice = int(click.prompt(f"Enter the number of the booking to cancel (1 - {len(bookings)}), or 0 to cancel "))
+                    if 1 <= choice <= len(bookings):
+                        selected_booking = booking[choice - 1]
+                        event_id = selected_booking.to_dict()['google_event_id']
+
+                        # Remove from Google Calendar
+                        service = get_calendar()
+                        if not service:
+                            main_menu()
+                            return
+                        try:
+                            service.events().delete(calendarId='primary', eventId=event_id).execute()
+                        except Exception as e:
+                            click.echo(f"⚠️ Error while deleting event: {e}")
+                            main_menu()
+                            return        
+                        try:
+                            db.collection('meetings').document(selected_booking.id).delete()
+                        except Exception as e:
+                            click.echo(f"⚠️ Error while deleting from Firestore: {e}")
+                            main_menu()
+                            return
+                        click.echo("✅ Booking successfully canceled.")
+
+                        meeting_data = selected_booking.to_dict()
+                        try:
+                            send_meeting_notification(meeting_data, notification_type='cancellation') 
+                        except Exception as e:
+                            click.echo(f"⚠️ Failed to send cancellation notification: {e}")
                     else:
                         click.echo("⚠️ Invalid choice. Please enter a number within the range.")
                 except ValueError:
                     click.echo("⚠️ Invalid input. Please enter a number.")
 
-            if choice == 0:
-                click.echo("❌ Cancel operation aborted.")
-                main_menu()
-                return
-            
-            selected_booking = booking[choice - 1]
-            event_id = selected_booking.to_dict()['google_event_id']
-
-            # Remove from Google Calendar
-            service = get_calendar()
-            if not service:
-                main_menu()
-                return
-            try:
-                service.events().delete(calendarId='primary', eventId=event_id).execute()
-            except Exception as e:
-                click.echo(f"⚠️ Error while deleting event: {e}")
-                main_menu()
-                return
-            try:
-                db.collection('meetings').document(selected_booking.id).delete()
-            except Exception as e:
-                click.echo(f"⚠️ Error while deleting from Firestore: {e}")
-                main_menu()
-                return
-            click.echo("✅ Booking successfully canceled.")
-
-            meeting_data = selected_booking.to_dict()
-            try:
-                send_meeting_notification(meeting_data, notification_type='cancellation') 
-            except Exception as e:
-                click.echo(f"⚠️ Failed to send cancellation notification: {e}")
-    
+                if choice == 0:
+                    click.echo("❌ Cancel operation aborted.")
+                    return
+                else:
+                    click.echo("⚠️ Invalid choice. Please try again.")
+                    main_menu()
+                    return
+                                
+            main_menu()
     except Exception as e:
         click.echo(f"⚠️ Error canceling booking: {e}")
         main_menu()
