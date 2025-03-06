@@ -6,7 +6,9 @@ from google.cloud import firestore
 from googleapiclient.errors import HttpError
 from login import signin, signup
 from notify import send_workshop_notification
+from cleanup import cleanup_expired_entries
 import pytz
+
 
 SAST = pytz.timezone('Africa/Johannesburg')
 
@@ -19,6 +21,8 @@ def view_workshop():
     if not current_session['logged_in']:
         return
     
+    cleanup_expired_entries()
+    
     email = current_session['email']
     click.echo(f"📩 Fetching workshops for {email}")
 
@@ -27,11 +31,12 @@ def view_workshop():
         page_num = 1
 
         while True:
-            requested_workshops_ref = db.collection('workshops').where(filter=firestore.FieldFilter('organizer', '==', email))
-            requested_workshops = list(requested_workshops_ref.stream())
+            current_time = datetime.datetime.now(SAST)
+            requested_workshops_ref = db.collection('workshops').where(filter=firestore.FieldFilter('organizer', '==', email)).where(filter=firestore.FieldFilter('end_time', '>', current_time)).stream()
+            requested_workshops = list(requested_workshops_ref)
 
-            workshops_ref = db.collection('workshops').where(filter=firestore.FieldFilter('attendees', 'array_contains', email))
-            workshops = list(workshops_ref.stream())
+            workshops_ref = db.collection('workshops').where(filter=firestore.FieldFilter('attendees', 'array_contains', email)).where(filter=firestore.FieldFilter('end_time', '>', current_time)).stream()
+            workshops = list(workshops_ref)
 
             all_workshop = requested_workshops + workshops
             unique_workshops = {workshop.id: workshop for workshop in all_workshop}.values()
@@ -156,6 +161,10 @@ def create_workshop():
         return
 
     title = click.prompt('Workshop title ')
+    if not title:
+        click.echo("⚠️ Workshop title is required.")
+        main_menu()
+        return
     description = click.prompt('About the workshop ')
     date = click.prompt("Date of the workshop(DD/MM/YYYY) ")
     start_time = click.prompt('Workshop start time(HH:MM) ')
@@ -370,6 +379,7 @@ def cancel_workshop():
     if not current_session['logged_in']:
         return
     
+    cleanup_expired_entries()
     user_id = current_session.get('user_id')
     user_email = current_session.get('email')
 
@@ -405,7 +415,7 @@ def cancel_workshop():
         upcoming_workshops = []
         for workshop in workshops:
             workshop_data = workshop.to_dict()
-            end_time = datetime.datetime.fromisoformat(workshop_data.get('end_time', ''))
+            end_time = datetime.datetime.fromisoformat(workshop_data.get('end_time', '>', datetime.datetime.now(SAST).isoformat()))
 
             if end_time.tzinfo is None:
                 end_time = SAST.localize(end_time)
@@ -476,59 +486,13 @@ def cancel_workshop():
                 except Exception as e:
                     click.echo(f"⚠️ Error displaying workshop {num}: {e}")
                     continue
-                
-            while True:
-                try:
-                    choice = int(click.prompt(f"Enter the number of the workshop to cancel (1 - {len(workshops)}), or 0 to cancel "))
-                    if 0 <= choice <= len(workshops):
-                        break
-                    else:
-                        click.echo("⚠️ Invalid choice. Please enter a number within the range.")
-                
-                except ValueError:
-                    click.echo("⚠️ Invalid input. Please enter a number.")
-
-            if choice == 0:
-                click.echo("❌ Cancel operation aborted.")
-                main_menu()
-                return
-            
-            selected_workshop = workshops[choice - 1]
-            workshop_data = selected_workshop.to_dict()
-            event_id = workshop_data.get('google_event_id')
-
-            if workshop_data.get('organizer') != user_email:
-                click.echo("⚠️ You are not authorized to cancel this workshop.")
-                main_menu()
-                return
-
-            service = get_calendar()
-            if not service:
-                click.echo("⚠️ Failed to initialize Google Calendar service.")
-                main_menu()
-                return
-
-            try:
-                service.events().delete(calendarId='primary', eventId=event_id).execute()
-                click.echo("✅ Google Calendar event deleted.")
-            except HttpError as e:
-                click.echo(f"⚠️Error while deleting Google Calendar event: {e}")
-                main_menu()
-                return
-
-            try:
-                db.collection('workshops').document(selected_workshop.id).delete()
-                click.echo("✅ Workshop deleted from Firestore.")
-            except Exception as e:
-                click.echo(f"⚠️ Error while deleting workshop from Firestore: {e}")
-                main_menu()
-                return
              
             if page_num > 1:
                 click.echo("Enter 'p' for previous page")
             if page_num < total_pages:
                 click.echo("Enter 'n' for next page")
             click.echo("Enter 'menu' to return to the main menu")
+            click.prompt(f"Enter the number of the workshop to cancel (1 - {len(workshops)}), or 0 to cancel ")
 
             choice = click.prompt("Enter your choice").lower()
             if choice == 'p' and page_num > 1:
@@ -538,12 +502,53 @@ def cancel_workshop():
             elif choice == 'menu':
                 main_menu()
                 return
-            for attendee in attendees:
-                click.echo(f"📩 Notification sent to: {attendee}")
-            click.echo(f"✅ Workshop '{workshop_data['Title']}' has been canceled.")
+                
+            while True:
+                try:
+                    choice = int(choice)
+                    if 1 <= choice <= len(workshop_page):
+                        selected_workshop = workshops[choice - 1]
+                        workshop_data = selected_workshop.to_dict()
+                        event_id = workshop_data.get('google_event_id')
+            
+                        service = get_calendar()
+                        if not service:
+                            click.echo("⚠️ Failed to initialize Google Calendar service.")
+                            main_menu()
+                            return
+                       
+                        try:
+                            service.events().delete(calendarId='primary', eventId=event_id).execute()
+                            click.echo("✅ Google Calendar event deleted.")
+                        except HttpError as e:
+                            click.echo(f"⚠️Error while deleting Google Calendar event: {e}")
+                            main_menu()
+                            return
 
-            send_workshop_notification(workshop_data, notification_type="cancellation")
-            main_menu()
+                        try:
+                            db.collection('workshops').document(selected_workshop.id).delete()
+                            click.echo("✅ Workshop deleted from Firestore.")
+                        except Exception as e:
+                            click.echo(f"⚠️ Error while deleting workshop from Firestore: {e}")
+                            main_menu()
+                            return
+                        
+                        for attendee in attendees:
+                            click.echo(f"📩 Notification sent to: {attendee}")
+                        click.echo(f"✅ Workshop '{workshop_data['Title']}' has been canceled.")
+
+                        send_workshop_notification(workshop_data, notification_type="cancellation")
+                        view_workshop()
+                        return
+                    
+                    elif choice == 0:
+                        click.echo("❌ Cancel operation aborted.")
+                        main_menu()
+                        return
+                    else:
+                        click.echo("⚠️ Invalid choice. Please enter a number within the range.")
+                except ValueError:
+                    click.echo("⚠️ Invalid input. Please enter a number.")
 
     except Exception as e:
         click.echo(f"⚠️ Error canceling workshop: {e}")

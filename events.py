@@ -1,9 +1,14 @@
+from datetime import datetime
 from login import signin, signup
 import click
 from firebase_auth import db, current_session
 from calender import get_calendar
 from google.cloud import firestore
 from notify import send_meeting_notification
+from cleanup import cleanup_expired_entries
+import pytz
+
+SAST = pytz.timezone('Africa/Johannesburg')
 
 @click.command()
 def view_booking():
@@ -13,6 +18,8 @@ def view_booking():
     if not current_session['logged_in']:
         return
     
+    cleanup_expired_entries()
+    
     email = current_session['email']
     click.echo(f"📩 Fetching bookings for {email}")
 
@@ -21,11 +28,13 @@ def view_booking():
         page_num = 1
 
         while True:
-            requested_bookings_ref = db.collection('meetings').where(filter=firestore.FieldFilter('organizer', '==', email))
-            requested_bookings = list(requested_bookings_ref.stream())
+            current_time = datetime.now(SAST).isoformat()
+            
+            requested_bookings_ref = db.collection('meetings').where(filter=firestore.FieldFilter('organizer', '==', email)).where(filter=firestore.FieldFilter('end_time', '>', current_time)).stream()
+            requested_bookings = list(requested_bookings_ref)
            
-            booking_ref = db.collection('meetings').where(filter=firestore.FieldFilter('attendees', 'array_contains', email))
-            bookings = list(booking_ref.stream())
+            booking_ref = db.collection('meetings').where(filter=firestore.FieldFilter('attendees', 'array_contains', email)).where(filter=firestore.FieldFilter('end_time', '>',current_time)).stream()
+            bookings = list(booking_ref)
 
             all_bookings = requested_bookings + bookings
             unique_bookings = {booking.id: booking for booking in all_bookings}.values()
@@ -102,12 +111,15 @@ def view_booking():
         main_menu()
 
 @click.command()
+
 def cancel_booking():
     """Cancel an existing booking."""
     from main import main_menu
 
     if not current_session['logged_in']:
         return
+    
+    cleanup_expired_entries()
     
     email = current_session['email']
     click.echo(f"Fetching all bookings...")
@@ -117,11 +129,13 @@ def cancel_booking():
         page_num = 1
 
         while True:
-            requested_bookings_ref = db.collection('meetings').where(filter=firestore.FieldFilter('organizer', '==', email))
-            requested_bookings = list(requested_bookings_ref.stream())
+            current_time = datetime.now(SAST)
 
-            booking_ref = db.collection('meetings').where(filter=firestore.FieldFilter('attendees', 'array_contains', email))
-            bookings = list(booking_ref.stream())
+            requested_bookings_ref = db.collection('meetings').where(filter=firestore.FieldFilter('organizer', '==', email)).where(filter=firestore.FieldFilter(('end_time', '>', current_time))).stream()
+            requested_bookings = list(requested_bookings_ref)
+
+            booking_ref = db.collection('meetings').where(filter=firestore.FieldFilter('attendees', 'array_contains', email)).where(filter=firestore.FieldFilter(('end_time', '>', current_time))).stream()
+            bookings = list(booking_ref)
 
             all_bookings = requested_bookings + bookings
             unique_bookings = {booking.id: booking for booking in all_bookings}.values()        
@@ -151,7 +165,7 @@ def cancel_booking():
                 google_event_id = data.get('google_event_id', 'No Event ID')
                 
                 try:
-                    from datetime import datetime
+                    
                     start_time_obj = datetime.fromisoformat(start_time)
                     end_time_obj = datetime.fromisoformat(end_time)
                     formatted_start_time = start_time_obj.strftime('%I:%M %p')
@@ -181,6 +195,7 @@ def cancel_booking():
             click.echo("Enter 'menu' to return to the main menu")
 
             choice = click.prompt("Enter your choice").lower()
+
             if choice == 'p' and page_num > 1:
                 page_num -= 1
             elif choice == 'n' and page_num < total_pages:
@@ -191,8 +206,8 @@ def cancel_booking():
             else:
                 try:
                     choice = int(click.prompt(f"Enter the number of the booking to cancel (1 - {len(bookings)}), or 0 to cancel "))
-                    if 1 <= choice <= len(bookings):
-                        selected_booking = booking[choice - 1]
+                    if 1 <= choice <= len(booking_page):
+                        selected_booking = booking_page[choice - 1]
                         event_id = selected_booking.to_dict()['google_event_id']
 
                         # Remove from Google Calendar
@@ -205,7 +220,8 @@ def cancel_booking():
                         except Exception as e:
                             click.echo(f"⚠️ Error while deleting event: {e}")
                             main_menu()
-                            return        
+                            return    
+                            
                         try:
                             db.collection('meetings').document(selected_booking.id).delete()
                         except Exception as e:
