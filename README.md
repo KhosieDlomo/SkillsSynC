@@ -1,12 +1,79 @@
-# SkillsSynC
+# SkillsSync
 
-### SkillSync Project Instructions
-
-  
+SkillsSync is a Python-based application designed to facilitate mentorship and peer collaboration. It integrates Firebase for authentication and database management, Google Calendar for scheduling, and SMTP for email notifications.
 
 ---
 
-  
+## Installation
+
+1. **Download the `dist.zip` file:**
+   - Download the `dist.zip` archive from the provided link.
+  ## Download the Application
+You can download the pre-built application from [this Google Drive link]: https://drive.google.com/file/d/1hWnW4MBvwGmS7I6Xse_BN6qOtx_5hgOm/view?usp=drive_link
+
+2. **Extract the contents:**
+   - Extract the contents of `dist.zip` to a folder on your computer.
+
+3. **Verify the files:**
+   - Ensure the following files are present in the same folder as `main.exe`:
+     - `.env` (environment variables).
+     - `skillssync-f88a7-firebase-adminsdk-u1lm7-2bf0d05d8f.json` (Firebase credentials).
+     - `credentials.json` (Google API credentials).
+     - `token.json` (Google OAuth token).
+
+---
+
+## Running the Application
+
+1. **Open a terminal or command prompt:**
+   - On **Windows**, press `Win + R`, type `cmd`, and press Enter.
+   - On **macOS/Linux**, open the Terminal application.
+
+2. **Navigate to the folder:**
+   - Use the `cd` command to navigate to the folder where you extracted the `dist.zip` contents. For example:
+     ```bash
+     cd path\to\extracted\folder
+     ```
+
+3. **Run the executable:**
+   - On **Windows**, run:
+     ```bash
+     main.exe
+     ```
+   - On **macOS/Linux**, run:
+     ```bash
+     ./main
+     ```
+
+---
+
+## Troubleshooting
+
+### **File Not Found Errors**
+- Ensure all required files (`.env`, Firebase credentials, etc.) are in the same folder as `main.exe`.
+
+### **Firebase/Google API Errors**
+- Verify that the credentials files are correct and not expired.
+- Ensure the `.env` file contains valid environment variables.
+
+### **Email Notifications**
+- Ensure your email credentials in `.env` are correct.
+- Check that your email provider allows SMTP access.
+
+---
+
+## Support
+
+For assistance, please contact khosidlomo012@gmail.com.
+
+---
+
+-----------------------------------------------------------------------------------------
+-----------------------------------------------------------------------------------------
+-----------------------------------------------------------------------------------------
+# SkillsSynC
+
+### SkillSync Project Instructions
 
 ## Project Overview
 

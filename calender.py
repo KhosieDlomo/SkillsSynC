@@ -1,4 +1,3 @@
-import datetime
 import os
 import click
 from google.oauth2.credentials import Credentials 
@@ -6,7 +5,7 @@ from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
 from google.auth.transport.requests import Request
 from googleapiclient.errors import HttpError
-
+from utils import resource_path
 
 SCOPES = ['https://www.googleapis.com/auth/calendar',
           'https://www.googleapis.com/auth/calendar.events'
@@ -28,7 +27,7 @@ def get_calendar():
                     os.remove(token_path)  
                     return get_calendar()
             else:
-                flow = InstalledAppFlow.from_client_secrets_file('credentials.json', SCOPES)
+                flow = InstalledAppFlow.from_client_secrets_file(resource_path('credentials.json'), SCOPES)
                 cred = flow.run_local_server(port=0)
                 
             with open('token.json', 'w') as token:

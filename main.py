@@ -1,7 +1,6 @@
 import click
 from login import signin, signup, reset_password, signout, current_session
 from events import view_booking, cancel_booking
-from book_meetings import bookings
 from workshops import view_workshop, create_workshop,cancel_workshop
 import firebase_admin
 from stretch_feature import *
@@ -43,6 +42,7 @@ def main_menu():
                 try:
                     choice = int(choice)
                     if choice == 1:
+                        from book_meetings import bookings
                         bookings()
                     elif choice == 2:
                         view_booking()

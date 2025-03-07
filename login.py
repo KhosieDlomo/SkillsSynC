@@ -4,6 +4,10 @@ from firebase_auth import auth, db, current_session
 from validation import valid_input
 import requests
 from datetime import datetime
+from utils import resource_path
+from dotenv import load_dotenv
+
+load_dotenv(resource_path('.env'))
 
 def signin():
     """Welcome Back, Please Sign in"""

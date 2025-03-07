@@ -1,6 +1,6 @@
 from datetime import datetime
 import click
-from firebase_auth import db, auth, require_auth, current_session
+from firebase_auth import db, require_auth, current_session
 from googleapiclient.errors import HttpError
 from availability import available_mentors, available_peers
 from google.cloud import firestore

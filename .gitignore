@@ -6,3 +6,6 @@
 *.json
 venv
 /venv
+dist/
+build/
+dist.zip

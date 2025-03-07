@@ -2,9 +2,10 @@ import pyrebase
 import os
 import firebase_admin
 from firebase_admin import firestore, credentials
+from utils import resource_path
 from dotenv import load_dotenv
 
-load_dotenv()
+load_dotenv(resource_path('.env'))
 
 
 Config = {
@@ -18,7 +19,7 @@ Config = {
           'databaseURL':os.getenv('DATABASE_URL')
           }
 
-cred = credentials.Certificate('skillssync-f88a7-firebase-adminsdk-u1lm7-2bf0d05d8f.json')
+cred = credentials.Certificate(resource_path('skillssync-f88a7-firebase-adminsdk-u1lm7-2bf0d05d8f.json'))
 firebase_admin.initialize_app(cred)
 
 db = firestore.client()

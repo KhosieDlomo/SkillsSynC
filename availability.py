@@ -2,7 +2,8 @@ from firebase_auth import db
 import click
 from datetime import datetime,timedelta
 from google.cloud import firestore
-from utils import handle_no_mentors_or_peers
+from stretch_feature import *
+from main import main_menu
 import pytz
 
 SAST =pytz.timezone('Africa/Johannesburg')
@@ -54,6 +55,7 @@ def calculate_availability(user_data):
             'available_time_start': '00:00',
             'available_time_end': '23:59'
         }
+    
 def available_mentors(expertise = None, language = None):
     """Functions to display available mentors"""
     try:
@@ -70,7 +72,8 @@ def available_mentors(expertise = None, language = None):
         
         if not mentor_lst:
             click.echo('No mentors available at the moment.')
-            handle_no_mentors_or_peers()
+            main_menu()
+            
         return mentor_lst
     except Exception as e:
         click.echo(f"Error fetching mentors: {e}")
@@ -93,7 +96,7 @@ def available_peers(expertise=None, language = None):
         
         if not peers_lst:
             click.echo('No peers available at the moment.')
-            handle_no_mentors_or_peers()
+            main_menu()
         return peers_lst
     except Exception as e:
         click.echo(f"Error while fetching peers: {e}")
