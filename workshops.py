@@ -51,8 +51,6 @@ def view_workshop():
             end_page = start_page + per_page
             workshop_page = list(unique_workshops)[start_page:end_page]
             
-            # workshops = list(workshops_ref.offset((page_num - 1) * per_page).limit(per_page).stream())
-                        
             click.echo(f'📩 ---Upcoming Workshops (Page {page_num} of {total_pages})---')
             
             for num, workshop in enumerate(workshop_page, start=1):
@@ -162,11 +160,11 @@ def create_workshop():
     
     while True:
 
-        title = click.prompt('Workshop title ')
-        if not title:
+        subject = click.prompt('Workshop title ')
+        if not subject:
             click.echo("⚠️ Workshop title is required.")
-            main_menu()
-            return
+            continue
+            
         description = click.prompt('About the workshop ')
         date = click.prompt("Date of the workshop(DD/MM/YYYY) ")
         start_time = click.prompt('Workshop start time(HH:MM) ')
@@ -181,19 +179,13 @@ def create_workshop():
             start_hour = SAST.localize(datetime.datetime.strptime(f'{date} {start_time}', '%d/%m/%Y %H:%M'))
             end_hour = SAST.localize(datetime.datetime.strptime(f'{date} {end_time}', '%d/%m/%Y %H:%M'))
 
-        except ValueError:
-            click.echo('⚠️ Invalid date or time format, please use DD/MM/YYYY HH:MM')
-            main_menu()
-            return
-        
-        if start_hour.weekday() >= 5 or start_hour.hour < 7 or end_hour.hour > 17:
-            click.echo("⚠️ Error! Meetings are only allowed on weekdays between 07:00 to 17:00.")
-            main_menu()
-            return
-        
-        time_min = start_hour.isoformat()
-        time_max = end_hour.isoformat()
-        try:
+            if start_hour.weekday() >= 5 or start_hour.hour < 7 or end_hour.hour > 17:
+                click.echo("⚠️ Error! Meetings are only allowed on weekdays between 07:00 to 17:00.")
+                continue
+            
+            time_min = start_hour.isoformat()
+            time_max = end_hour.isoformat()
+            
             event_result = service.events().list( calendarId='primary', timeMin=time_min, timeMax=time_max, singleEvents=True).execute()
             events = event_result.get('items', [])
             
@@ -201,62 +193,57 @@ def create_workshop():
                 click.echo("⚠️ Conflicting events found during the specified time.")
                 for event in events:
                     click.echo(f"Event: {event.get('summary')}, Start: {event.get('start')}, End: {event.get('end')}")
-                click.echo("⚠️ Please select a different time.")
+                click.echo("⚠️ Please select a different time or date.")
+                continue
+                
+            peers = db.collection('users').where(filter=firestore.FieldFilter('role', '==', 'peer')).stream()
+            peers_email = {peer.to_dict().get('email').strip() for peer in peers if peer.exists}
+                
+            mentors = db.collection('users').where(filter=firestore.FieldFilter('role', '==', 'mentor')).stream()
+            mentors_email = {mentor.to_dict().get('email').strip() for mentor in mentors if mentor.exists}  
+            
+            attendees = [{'email': email.strip(), 'optional':email != user_email} for email in mentors_email.union(peers_email)]
+            
+            if user_email not in mentors_email:
+                click.echo("⚠️ Only mentors can create workshops.")
                 main_menu()
                 return
             
-        except HttpError as e:
-            click.echo(f'⚠️ Error while fetching Events from the calender {e}')
-            main_menu()
-            return
-        
-        peers = db.collection('users').where(filter=firestore.FieldFilter('role', '==', 'peer')).stream()
-        peers_email = {peer.to_dict().get('email').strip() for peer in peers if peer.exists}
+            approval_mentor = [user_email]
             
-        mentors = db.collection('users').where(filter=firestore.FieldFilter('role', '==', 'mentor')).stream()
-        mentors_email = {mentor.to_dict().get('email').strip() for mentor in mentors if mentor.exists}  
-        
-        attendees = [{'email': email.strip(), 'optional':email != user_email} for email in mentors_email.union(peers_email)]
+            attendees = []
+            #Mentors
+            for emails in mentors_email:
+                if emails != user_email:
+                    approval_mentor.append(emails)
+                    attendees.append({'email': emails.strip(), 'optional': True})
 
-        if user_email not in mentors_email:
-            click.echo("⚠️ Only mentors can create workshops.")
-            main_menu()
-            return
+            #peers
+            for emails in peers_email:
+                attendees.append({'email': emails.strip(), 'optional': False})
         
-        approval_mentor = [user_email]
-        
-        attendees = []
-        #Mentors
-        for emails in mentors_email:
-            if emails != user_email:
-                approval_mentor.append(emails)
-                attendees.append({'email': emails.strip(), 'optional': True})
-
-        #peers
-        for emails in peers_email:
-            attendees.append({'email': emails.strip(), 'optional': False})
-    
-        event = {'summary': title,
-                'description': description,
-                'location': location,
-                'start': {'dateTime': start_hour.isoformat(), 'timeZone': 'Africa/Johannesburg'},
-                'end': {'dateTime': end_hour.isoformat(), 'timeZone': 'Africa/Johannesburg'},
-                'attendees': attendees,
-                'organizer': {'email': user_email},
-                'reminders': {'useDefault': False,
-                        'overrides': [{'method': 'email', 'minutes': 24 * 60},
-                                        {'method': 'popup', 'minutes': 15},
-                                        ]   
-                            },
-                }
-        
-        if online_link:
-                event['description'] = f"{event.get('description', '')}\nJoin online: {online_link}"
-        try:
+            event = {'summary': subject,
+                    'description': description,
+                    'location': location,
+                    'start': {'dateTime': start_hour.isoformat(), 'timeZone': 'Africa/Johannesburg'},
+                    'end': {'dateTime': end_hour.isoformat(), 'timeZone': 'Africa/Johannesburg'},
+                    'attendees': attendees,
+                    'organizer': {'email': user_email},
+                    'reminders': {'useDefault': False,
+                            'overrides': [{'method': 'email', 'minutes': 24 * 60},
+                                            {'method': 'popup', 'minutes': 15},
+                                            ]   
+                                },
+                    }
+            
+            if online_link:
+                    event['description'] = f"{event.get('description', '')}\nJoin online: {online_link}"
+            
             event_result = service.events().insert(calendarId='primary', body=event,sendUpdates='all').execute()
 
             workshop_data = {
-                'Title': title,
+                'Title': subject,
+                'description': description,
                 'Date': date,
                 'start_time': start_hour.isoformat(),
                 'end_time': end_hour.isoformat(),
@@ -272,14 +259,28 @@ def create_workshop():
             
             db.collection('workshops').add(workshop_data)
             click.echo('✅ Workshop created and all peers added successfully.')
-
-            send_workshop_notification(workshop_data, notification_type="confirmation")
+            try:
+                send_workshop_notification(workshop_data, notification_type="confirmation")
+            except Exception as e:
+                 click.echo(f"⚠️ Error sending workshop notification: {e}")
             break
+
+        except ValueError:
+            click.echo('⚠️ Invalid date or time format, please use DD/MM/YYYY HH:MM')
+            continue
+        
+            
+        except HttpError as e:
+            click.echo(f'⚠️ Error while fetching Events from the calender {e}')
+            continue    
         
         except HttpError as error:
             click.echo(f"⚠️ An error occured while creating event: {error}")
+            continue
+
         except Exception as e:
             click.echo(f'⚠️ Failed to create workshop: {e}')
+            continue
         
     main_menu()
 
@@ -495,14 +496,23 @@ def cancel_workshop():
             if page_num < total_pages:
                 click.echo("Enter 'n' for next page")
             click.echo("Enter 'menu' to return to the main menu")
-            click.prompt(f"Enter the number of the workshop to cancel (1 - {len(workshops)}), or 0 to cancel ")
+            click.prompt(f"Enter the number of the workshop to cancel (1 - {len(workshops)}), or 'c' to cancel ")
 
             choice = click.prompt("Enter your choice").lower()
             if choice == 'p' and page_num > 1:
                 page_num -= 1
+                continue
+
             elif choice == 'n' and page_num < total_pages:
                 page_num += 1
+                continue
+
             elif choice == 'menu':
+                main_menu()
+                return
+            
+            if choice == 'c':
+                click.echo("❌ Cancel operation aborted.")
                 main_menu()
                 return
                 
@@ -544,10 +554,6 @@ def cancel_workshop():
                         view_workshop()
                         return
                     
-                    elif choice == 0:
-                        click.echo("❌ Cancel operation aborted.")
-                        main_menu()
-                        return
                     else:
                         click.echo("⚠️ Invalid choice. Please enter a number within the range.")
                 except ValueError:

@@ -90,7 +90,7 @@ def send_workshop_notification(workshop_data, notification_type="confirmation"):
 
     body = f"""
     Workshop: {workshop_data['Title']}
-    Date: {workshop_data['date']}
+    Date: {workshop_data['Date']}
     Time: {workshop_data['start_time']} - {workshop_data['end_time']}
     Location: {workshop_data['location']}
     Organizer: {workshop_data['organizer']}
