@@ -32,6 +32,7 @@ def view_workshop():
 
         while True:
             current_time = datetime.datetime.now(SAST)
+            
             requested_workshops_ref = db.collection('workshops').where(filter=firestore.FieldFilter('organizer', '==', email)).where(filter=firestore.FieldFilter('end_time', '>', current_time)).stream()
             requested_workshops = list(requested_workshops_ref)
 
@@ -66,13 +67,6 @@ def view_workshop():
                     accepted_mentors = workshop.to_dict().get('accepted_mentors', [])
                     organizer = workshop.to_dict().get('organizer', '')
 
-                    if isinstance(mentors, str):
-                        mentors = [mentors]
-                    if isinstance(peers, str):
-                        peers = [peers]
-                    if isinstance(accepted_mentors, str):
-                        accepted_mentors = [accepted_mentors]
-
                     attendees = list(set([organizer] + accepted_mentors + mentors + peers))
                     attendees = [attendee for attendee in attendees if attendee]
 
@@ -86,6 +80,9 @@ def view_workshop():
                         formatted_date = date
                         formatted_start_time = start_time
                         formatted_end_time = end_time
+                    
+                    if isinstance(mentors, str):
+                        mentors = [mentors]
 
                     click.echo(f"\n📋 Workshop {num}")
                     click.echo(f"├─ 📝 Title: {title}")
@@ -94,6 +91,7 @@ def view_workshop():
                     click.echo(f"├─ 📌 Location: {location}")
                     click.echo(f"├─ 👤 Mentors: {organizer}")
                     click.echo(f"├─ 👥 Attendees: {', '.join(attendees) if attendees else 'None'}")
+                    
                     if workshop.get('online_link'):
                         click.echo(f"└─ 🔗 Online Link: {online_link}")
                     else:
@@ -160,8 +158,8 @@ def create_workshop():
     
     while True:
 
-        subject = click.prompt('Workshop title ')
-        if not subject:
+        title = click.prompt('Workshop title ')
+        if not title:
             click.echo("⚠️ Workshop title is required.")
             continue
             
@@ -222,7 +220,7 @@ def create_workshop():
             for emails in peers_email:
                 attendees.append({'email': emails.strip(), 'optional': False})
         
-            event = {'summary': subject,
+            event = {'summary': title,
                     'description': description,
                     'location': location,
                     'start': {'dateTime': start_hour.isoformat(), 'timeZone': 'Africa/Johannesburg'},
@@ -242,8 +240,7 @@ def create_workshop():
             event_result = service.events().insert(calendarId='primary', body=event,sendUpdates='all').execute()
 
             workshop_data = {
-                'Title': subject,
-                'description': description,
+                'Title': title,
                 'Date': date,
                 'start_time': start_hour.isoformat(),
                 'end_time': end_hour.isoformat(),
@@ -259,10 +256,8 @@ def create_workshop():
             
             db.collection('workshops').add(workshop_data)
             click.echo('✅ Workshop created and all peers added successfully.')
-            try:
-                send_workshop_notification(workshop_data, notification_type="confirmation")
-            except Exception as e:
-                 click.echo(f"⚠️ Error sending workshop notification: {e}")
+
+            send_workshop_notification(workshop_data, notification_type="confirmation")
             break
 
         except ValueError:
