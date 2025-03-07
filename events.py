@@ -205,6 +205,7 @@ def cancel_booking():
             
             if choice == 'c':
                 click.echo("❌ Cancel operation aborted.")
+                main_menu()
                 return
             else:
                 try:

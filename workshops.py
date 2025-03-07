@@ -33,10 +33,10 @@ def view_workshop():
         while True:
             current_time = datetime.datetime.now(SAST)
             
-            requested_workshops_ref = db.collection('workshops').where(filter=firestore.FieldFilter('organizer', '==', email)).where(filter=firestore.FieldFilter('end_time', '>', current_time)).stream()
+            requested_workshops_ref = db.collection('workshops').where(filter=firestore.FieldFilter('organizer', '==', email)).stream()
             requested_workshops = list(requested_workshops_ref)
 
-            workshops_ref = db.collection('workshops').where(filter=firestore.FieldFilter('attendees', 'array_contains', email)).where(filter=firestore.FieldFilter('end_time', '>', current_time)).stream()
+            workshops_ref = db.collection('workshops').where(filter=firestore.FieldFilter('attendees', 'array_contains', email)).stream()
             workshops = list(workshops_ref)
 
             all_workshop = requested_workshops + workshops
@@ -91,7 +91,7 @@ def view_workshop():
                     click.echo(f"├─ 📌 Location: {location}")
                     click.echo(f"├─ 👤 Mentors: {organizer}")
                     click.echo(f"├─ 👥 Attendees: {', '.join(attendees) if attendees else 'None'}")
-                    
+
                     if workshop.get('online_link'):
                         click.echo(f"└─ 🔗 Online Link: {online_link}")
                     else:
@@ -414,7 +414,7 @@ def cancel_workshop():
         upcoming_workshops = []
         for workshop in workshops:
             workshop_data = workshop.to_dict()
-            end_time = datetime.datetime.fromisoformat(workshop_data.get('end_time', '>', datetime.datetime.now(SAST).isoformat()))
+            end_time = datetime.datetime.fromisoformat(workshop_data.get('end_time', datetime.datetime.now(SAST).isoformat()))
 
             if end_time.tzinfo is None:
                 end_time = SAST.localize(end_time)
@@ -541,6 +541,7 @@ def cancel_workshop():
                             main_menu()
                             return
                         
+                        attendees = workshop_data.get('attendees', [])
                         for attendee in attendees:
                             click.echo(f"📩 Notification sent to: {attendee}")
                         click.echo(f"✅ Workshop '{workshop_data['Title']}' has been canceled.")
