@@ -64,7 +64,6 @@ def view_booking():
                 google_event_id = data.get('google_event_id', 'No Event ID')
 
                 try:
-                    from datetime import datetime
                     start_time_obj = datetime.fromisoformat(start_time)
                     end_time_obj = datetime.fromisoformat(end_time)
                     formatted_start_time = start_time_obj.strftime('%I:%M %p')
@@ -111,7 +110,6 @@ def view_booking():
         main_menu()
 
 @click.command()
-
 def cancel_booking():
     """Cancel an existing booking."""
     from main import main_menu
@@ -129,12 +127,12 @@ def cancel_booking():
         page_num = 1
 
         while True:
-            current_time = datetime.now(SAST)
+            current_time = datetime.now(SAST).isoformat()
 
-            requested_bookings_ref = db.collection('meetings').where(filter=firestore.FieldFilter('organizer', '==', email)).where(filter=firestore.FieldFilter(('end_time', '>', current_time))).stream()
+            requested_bookings_ref = db.collection('meetings').where(filter=firestore.FieldFilter('organizer', '==', email)).where(filter=firestore.FieldFilter('end_time', '>', current_time )).stream()
             requested_bookings = list(requested_bookings_ref)
 
-            booking_ref = db.collection('meetings').where(filter=firestore.FieldFilter('attendees', 'array_contains', email)).where(filter=firestore.FieldFilter(('end_time', '>', current_time))).stream()
+            booking_ref = db.collection('meetings').where(filter=firestore.FieldFilter('attendees', 'array_contains', email)).where(filter=firestore.FieldFilter('end_time', '>', current_time )).stream()
             bookings = list(booking_ref)
 
             all_bookings = requested_bookings + bookings
@@ -193,6 +191,7 @@ def cancel_booking():
             if page_num < total_pages:
                 click.echo("Enter 'n' for next page")
             click.echo("Enter 'menu' to return to the main menu")
+            click.echo(f"Enter the number of the booking to cancel (1 - {len(bookings)}), or 'c' to cancel ")
 
             choice = click.prompt("Enter your choice").lower()
 
@@ -203,9 +202,13 @@ def cancel_booking():
             elif choice == 'menu':
                 main_menu()
                 return
+            
+            if choice == 'c':
+                click.echo("❌ Cancel operation aborted.")
+                return
             else:
                 try:
-                    choice = int(click.prompt(f"Enter the number of the booking to cancel (1 - {len(bookings)}), or 0 to cancel "))
+                    choice = int(choice)
                     if 1 <= choice <= len(booking_page):
                         selected_booking = booking_page[choice - 1]
                         event_id = selected_booking.to_dict()['google_event_id']
@@ -219,15 +222,13 @@ def cancel_booking():
                             service.events().delete(calendarId='primary', eventId=event_id).execute()
                         except Exception as e:
                             click.echo(f"⚠️ Error while deleting event: {e}")
-                            main_menu()
-                            return    
+                            continue    
                             
                         try:
                             db.collection('meetings').document(selected_booking.id).delete()
                         except Exception as e:
                             click.echo(f"⚠️ Error while deleting from Firestore: {e}")
-                            main_menu()
-                            return
+                            continue
                         click.echo("✅ Booking successfully canceled.")
 
                         meeting_data = selected_booking.to_dict()
@@ -235,14 +236,13 @@ def cancel_booking():
                             send_meeting_notification(meeting_data, notification_type='cancellation') 
                         except Exception as e:
                             click.echo(f"⚠️ Failed to send cancellation notification: {e}")
+                        break
+
                     else:
                         click.echo("⚠️ Invalid choice. Please enter a number within the range.")
                 except ValueError:
                     click.echo("⚠️ Invalid input. Please enter a number.")
 
-                if choice == 0:
-                    click.echo("❌ Cancel operation aborted.")
-                    return
                 else:
                     click.echo("⚠️ Invalid choice. Please try again.")
                     main_menu()
