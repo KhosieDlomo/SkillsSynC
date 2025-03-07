@@ -3,6 +3,7 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from firebase_auth import current_session,db
 from google.cloud import firestore
+import click
 import os
 
 from_password = os.getenv('EMAIL_Password')
@@ -23,9 +24,9 @@ def send_email(subject, body, to_email):
         text = msg.as_string()
         server.sendmail(from_email, to_email, text)
         server.quit()
-        print("Email sent successfully")
+        click.echo("Email sent successfully")
     except Exception as e:
-        print(f"Failed to send email: {e}")
+        click.echo(f"Failed to send email: {e}")
 
 def send_meeting_notification(meeting_data, notification_type="confirmation"):
     '''Sending a meeting confirmation or reminder email to all attendees'''
@@ -63,10 +64,10 @@ def fetch_meeting_data(meeting_id):
         if meeting.exists:
             return meeting.to_dict()
         else:
-            print("Meeting not found")
+            click.echo("Meeting not found")
             return None
     except Exception as e:
-        print(f"Error fetching meeting data: {e}")
+        click.echo(f"Error fetching meeting data: {e}")
         return None
 
 def notify_meeting_confirmation(meeting_id):
@@ -77,9 +78,18 @@ def notify_meeting_confirmation(meeting_id):
 
 def send_workshop_notification(workshop_data, notification_type="confirmation"):
     '''Sending workshop notifications based on type (confirmation, reminder, update, etc.)'''
-    subject = f"Workshop {notification_type.capitalize()}"
+
+    if notification_type == "confirmation":
+        subject = "Workshop Confirmation"
+    elif notification_type == "update":
+        subject = "Workshop Update"
+    elif notification_type == "cancellation":
+        subject = "Workshop Cancellation"
+    else:
+        subject = "Workshop Notification"
+
     body = f"""
-    Workshop: {workshop_data['title']}
+    Workshop: {workshop_data['Title']}
     Date: {workshop_data['date']}
     Time: {workshop_data['start_time']} - {workshop_data['end_time']}
     Location: {workshop_data['location']}
@@ -95,4 +105,8 @@ def send_workshop_notification(workshop_data, notification_type="confirmation"):
         body = "Cancellation: " + body
 
     for attendee in workshop_data['attendees']:
-        send_email(subject, body, attendee)
+        try:
+            send_email(subject, body, attendee)
+            click.echo(f"Notification sent to {attendee}")
+        except Exception as e:
+            click.echo(f"⚠️ Failed to send notification to {attendee}: {e}")
